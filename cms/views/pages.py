@@ -279,8 +279,8 @@ def add_page():
         cursor.execute('INSERT INTO pages (title, slug) VALUES (?, ?)', (title, slug_input))
         page_id = cursor.lastrowid
 
-        # Get all default PAGE templates (exclude blog templates) and create page templates
-        cursor.execute("SELECT id, sort_order FROM templates WHERE is_default = 1 AND slug NOT LIKE 'blog_%' ORDER BY sort_order")
+        # Get all default PAGE templates and create page templates
+        cursor.execute("SELECT id, sort_order FROM page_template_defs WHERE is_default = 1 ORDER BY sort_order")
         default_templates = cursor.fetchall()
 
         for template in default_templates:
@@ -339,11 +339,11 @@ def edit_page(page_id):
 
         return redirect(url_for('pages.edit_page', page_id=page_id))
 
-    # Ensure page has all default PAGE templates (exclude blog templates)
+    # Ensure page has all default PAGE templates
     cursor.execute('SELECT template_id FROM page_templates WHERE page_id = ?', (page_id,))
     existing_ids = {row['template_id'] for row in cursor.fetchall()}
 
-    cursor.execute("SELECT id FROM templates WHERE is_default = 1 AND slug NOT LIKE 'blog_%' ORDER BY sort_order")
+    cursor.execute("SELECT id FROM page_template_defs WHERE is_default = 1 ORDER BY sort_order")
     default_ids = [row['id'] for row in cursor.fetchall()]
 
     if default_ids:
@@ -365,7 +365,7 @@ def edit_page(page_id):
         SELECT pt.id, pt.template_id, pt.custom_content, pt.use_default, pt.sort_order,
                t.title, t.slug, t.content as default_content, t.category
         FROM page_templates pt
-        JOIN templates t ON pt.template_id = t.id
+        JOIN page_template_defs t ON pt.template_id = t.id
         WHERE pt.page_id = ?
         ORDER BY pt.sort_order
     ''', (page_id,))

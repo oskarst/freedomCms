@@ -24,7 +24,7 @@ def generate_page_html(page_id, preview=False):
     cursor.execute('''
         SELECT pt.custom_content, pt.use_default, t.content as default_content, t.slug
         FROM page_templates pt
-        JOIN templates t ON pt.template_id = t.id
+        JOIN page_template_defs t ON pt.template_id = t.id
         WHERE pt.page_id = ?
         ORDER BY pt.sort_order
     ''', (page_id,))
@@ -65,7 +65,7 @@ def generate_blog_post_html(post_id, preview=False):
     cursor.execute('''
         SELECT bt.custom_content, bt.use_default, t.content as default_content, t.slug
         FROM blog_post_templates bt
-        JOIN templates t ON bt.template_id = t.id
+        JOIN blog_template_defs t ON bt.template_id = t.id
         WHERE bt.post_id = ?
         ORDER BY bt.sort_order
     ''', (post_id,))
@@ -93,7 +93,7 @@ def generate_blog_post_html(post_id, preview=False):
 
     # If no blocks found (legacy posts), fallback to minimal system templates + content
     if not blocks:
-        cursor.execute('SELECT slug, content FROM templates WHERE slug IN ("blog_base_header","blog_meta","blog_header_close") ORDER BY sort_order')
+        cursor.execute('SELECT slug, content FROM blog_template_defs WHERE slug IN ("base_header","meta","header_close") ORDER BY sort_order')
         sys_t = cursor.fetchall()
         for t in sys_t:
             html += t['content']

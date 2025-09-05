@@ -47,7 +47,7 @@
                     <h5>Template Information</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" id="templateEditForm">
                         <div class="mb-3">
                             <label for="title" class="form-label">Template Title *</label>
                             <input type="text" class="form-control" id="title" name="title" value="{{ template.title }}" required>
@@ -58,6 +58,15 @@
                             <label for="slug" class="form-label">Template Slug</label>
                             <input type="text" class="form-control" id="slug" name="slug" value="{{ template.slug }}">
                             <div class="form-text">URL-friendly identifier for the template</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="template_type" class="form-label">Template Type *</label>
+                            <select class="form-select" id="template_type" name="template_type" required disabled>
+                                <option value="page" {{ 'selected' if not template.slug.startswith('blog_') else '' }}>Page</option>
+                                <option value="blog" {{ 'selected' if template.slug.startswith('blog_') else '' }}>Blog</option>
+                            </select>
+                            <div class="form-text">Type is derived from the slug for existing templates.</div>
                         </div>
 
                         <div class="mb-3">
@@ -108,12 +117,30 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (window.CodeMirror) {
-        CodeMirror.fromTextArea(document.getElementById('content'), {
-            lineNumbers: true,
-            mode: 'text/html',
-            theme: 'neo',
-            viewportMargin: Infinity,
-        });
+        const textarea = document.getElementById('content');
+        if (textarea && !textarea._cmInitialized) {
+            textarea._cmInitialized = true;
+            const cm = CodeMirror.fromTextArea(textarea, {
+                lineNumbers: true,
+                mode: 'text/html',
+                theme: 'neo',
+                viewportMargin: Infinity,
+            });
+            textarea.style.display = 'none';
+            // Avoid HTML5 required focusing on hidden textarea
+            textarea.removeAttribute('required');
+            const form = document.getElementById('templateEditForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    cm.save();
+                    if (!textarea.value || textarea.value.trim() === '') {
+                        e.preventDefault();
+                        alert('Template content is required');
+                        cm.focus();
+                    }
+                });
+            }
+        }
     }
 });
 </script>

@@ -93,7 +93,7 @@ def blog_add():
             cursor.execute('INSERT OR IGNORE INTO blog_post_categories (post_id, category_id) VALUES (?, ?)', (post_id, int(cid)))
 
         # Attach blog templates from submitted form (or defaults if not provided)
-        cursor.execute("SELECT id, content, sort_order FROM templates WHERE is_default = 1 AND slug LIKE 'blog_%' ORDER BY sort_order")
+        cursor.execute("SELECT id, content, sort_order FROM blog_template_defs WHERE is_default = 1 ORDER BY sort_order")
         blog_defaults = cursor.fetchall()
         for idx, t in enumerate(blog_defaults):
             tid = t['id']
@@ -109,7 +109,7 @@ def blog_add():
     cursor.execute('SELECT * FROM blog_categories ORDER BY name')
     categories = cursor.fetchall()
     # Load default blog templates to display on add form
-    cursor.execute("SELECT id, title, slug, content FROM templates WHERE is_default = 1 AND slug LIKE 'blog_%' ORDER BY sort_order")
+    cursor.execute("SELECT id, title, slug, content FROM blog_template_defs WHERE is_default = 1 ORDER BY sort_order")
     blog_templates = cursor.fetchall()
     return render_template('blog/add.html', categories=categories, blog_templates=blog_templates)
 
@@ -127,19 +127,9 @@ def blog_edit(post_id):
         return redirect(url_for('blog.blog_list'))
 
     # Ensure blog templates exist in DB (seed if missing)
-    cursor.execute("SELECT COUNT(*) as cnt FROM templates WHERE slug LIKE 'blog_%'")
+    cursor.execute("SELECT COUNT(*) as cnt FROM blog_template_defs")
     bt_cnt = cursor.fetchone()['cnt']
-    if bt_cnt == 0:
-        seed_blog_templates = [
-            ('Blog Base Header', 'blog_base_header', 'system', '<!DOCTYPE html>\n<html lang="en">\n<head>', 1, 1),
-            ('Blog Meta Tags', 'blog_meta', 'system', '    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Blog</title>', 1, 2),
-            ('Blog Header Close', 'blog_header_close', 'system', '</head>\n<body>', 1, 3),
-            ('Blog Paragraph', 'blog_paragraph', 'content', '    <section class="py-4">\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-10 mx-auto">\n                    <p>Blog content paragraph.</p>\n                </div>\n            </div>\n        </div>\n    </section>', 1, 4),
-        ]
-        for title, slug, category, content, is_default, sort_order in seed_blog_templates:
-            cursor.execute('INSERT OR IGNORE INTO templates (title, slug, category, content, is_default, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-                           (title, slug, category, content, is_default, sort_order))
-        db.commit()
+    # (seeding is handled in init_db for blog_template_defs)
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -221,7 +211,7 @@ def blog_edit(post_id):
         SELECT bt.id, bt.template_id, bt.custom_content, bt.use_default, bt.sort_order,
                t.title, t.slug, t.content as default_content
         FROM blog_post_templates bt
-        JOIN templates t ON bt.template_id = t.id
+        JOIN blog_template_defs t ON bt.template_id = t.id
         WHERE bt.post_id = ?
         ORDER BY bt.sort_order
     ''', (post_id,))

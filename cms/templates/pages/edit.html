@@ -300,7 +300,18 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             // Keep a handle to the CM instance for later toggling readOnly
             ta._cm = cm;
+            // Hide original textarea to prevent double fields
+            ta.style.display = 'none';
         });
+        // Ensure CodeMirror values are saved back to textareas on submit
+        const form = document.getElementById('pageForm');
+        if (form) {
+            form.addEventListener('submit', function() {
+                document.querySelectorAll('textarea.code-html').forEach(function(ta) {
+                    if (ta._cm) { ta._cm.save(); }
+                });
+            });
+        }
     }
 });
 </script>

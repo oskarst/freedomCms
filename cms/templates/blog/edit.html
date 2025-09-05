@@ -193,6 +193,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 readOnly: ta.hasAttribute('readonly')
             });
             ta._cm = cm;
+            // Hide original textarea to prevent duplicate fields
+            ta.style.display = 'none';
         });
     }
     // Toggle default for blog template blocks

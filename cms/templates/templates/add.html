@@ -31,7 +31,7 @@
                     <h5>Template Information</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" id="templateAddForm">
                         <div class="mb-3">
                             <label for="title" class="form-label">Template Title *</label>
                             <input type="text" class="form-control" id="title" name="title" required>
@@ -42,6 +42,15 @@
                             <label for="slug" class="form-label">Template Slug</label>
                             <input type="text" class="form-control" id="slug" name="slug" placeholder="auto-generated">
                             <div class="form-text">Leave empty to auto-generate from title</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="template_type" class="form-label">Template Type *</label>
+                            <select class="form-select" id="template_type" name="template_type" required>
+                                <option value="page" selected>Page</option>
+                                <option value="blog">Blog</option>
+                            </select>
+                            <div class="form-text">Choose whether this template is for Pages or Blog.</div>
                         </div>
 
                         <div class="mb-3">
@@ -103,12 +112,31 @@ document.getElementById('title').addEventListener('input', function() {
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.CodeMirror) {
-        CodeMirror.fromTextArea(document.getElementById('content'), {
-            lineNumbers: true,
-            mode: 'text/html',
-            theme: 'neo',
-            viewportMargin: Infinity,
-        });
+        const textarea = document.getElementById('content');
+        if (textarea && !textarea._cmInitialized) {
+            textarea._cmInitialized = true;
+            const cm = CodeMirror.fromTextArea(textarea, {
+                lineNumbers: true,
+                mode: 'text/html',
+                theme: 'neo',
+                viewportMargin: Infinity,
+            });
+            textarea.style.display = 'none';
+            // Avoid HTML5 required focusing on hidden textarea
+            textarea.removeAttribute('required');
+            const form = document.getElementById('templateAddForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    cm.save();
+                    // Custom validation: ensure content not empty
+                    if (!textarea.value || textarea.value.trim() === '') {
+                        e.preventDefault();
+                        alert('Template content is required');
+                        cm.focus();
+                    }
+                });
+            }
+        }
     }
 });
 </script>
