@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% set title = "Media" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Media</h1>
+        <form class="d-flex" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="upload">
+            <input class="form-control me-2" type="file" name="image" accept="image/*" required>
+            <input class="form-control me-2" type="text" name="title" placeholder="Title (optional)">
+            <input class="form-control me-2" type="text" name="alt" placeholder="Alt (optional)">
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+    </div>
+
+    <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3">
+        {% for m in media %}
+        <div class="col">
+            <div class="card position-relative media-card">
+                <img src="{{ m.small or m.orig }}" class="card-img-top" alt="{{ m.alt }}" title="{{ m.title }}">
+                <div class="card-body p-2">
+                    <div class="small text-truncate" title="{{ m.title }}">{{ m.title }}</div>
+                </div>
+                <div class="overlay p-2">
+                    <div class="d-grid gap-1">
+                        <button class="btn btn-sm btn-light" onclick="copyTag('{{ m.small }}','{{ m.alt|e }}','{{ m.title|e }}')">Copy small &lt;img&gt;</button>
+                        <button class="btn btn-sm btn-light" onclick="copyTag('{{ m.medium }}','{{ m.alt|e }}','{{ m.title|e }}')">Copy medium &lt;img&gt;</button>
+                        <button class="btn btn-sm btn-light" onclick="copyTag('{{ m.large }}','{{ m.alt|e }}','{{ m.title|e }}')">Copy large &lt;img&gt;</button>
+                        <button class="btn btn-sm btn-light" onclick="copyTag('{{ m.orig }}','{{ m.alt|e }}','{{ m.title|e }}')">Copy original &lt;img&gt;</button>
+                        <form method="post" onsubmit="return confirm('Delete this image and all sizes?')">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="media_id" value="{{ m.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger mt-1">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+.media-card { overflow: hidden; }
+.media-card .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.55);
+    opacity: 0; transition: opacity .15s ease-in-out; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+}
+.media-card:hover .overlay { opacity: 1; }
+.media-card .btn { white-space: nowrap; }
+</style>
+<script>
+function copyTag(src, alt, title) {
+    const img = `<img src="${src}" alt="${alt || ''}" title="${title || ''}">`;
+    navigator.clipboard.writeText(img).then(function() {
+        alert('Copied to clipboard');
+    }, function() {
+        alert('Failed to copy');
+    });
+}
+</script>
+{% endblock %}
+
+

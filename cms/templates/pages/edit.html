@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% set title = "Edit Page" %}
+
+{% block content %}
+<div class="container-fluid">
+    <form method="post" id="pageForm">
+        <input type="hidden" name="action" value="save">
+
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1>Edit Page: {{ page.title }}</h1>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('pages.pages') }}" class="btn btn-outline-secondary rounded-pill">
+                            <i class="bi bi-arrow-left"></i> Back to Pages
+                        </a>
+                        <button type="submit" class="btn btn-primary rounded-pill">
+                            <i class="bi bi-save"></i> Save Page
+                        </button>
+                        <a href="{{ url_for('pages.preview_page', page_id=page.id) }}" class="btn btn-outline-info rounded-pill" target="_blank">
+                            <i class="bi bi-eye"></i> Preview
+                        </a>
+                        <button type="submit" formaction="{{ url_for('pages.publish_page', page_id=page.id) }}" class="btn btn-success rounded-pill">
+                            <i class="bi bi-upload"></i> {% if page.published %}Re-publish{% else %}Publish{% endif %}
+                        </button>
+                        <button type="submit" formaction="{{ url_for('pages.delete_page', page_id=page.id) }}"
+                                class="btn btn-outline-danger rounded-pill"
+                                onclick="return confirm('Are you sure you want to delete this page?')">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Page Templates</h5>
+                        <button type="button" id="toggleSystemBlocks" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-eye-slash"></i> Show System Blocks
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="templateBlocks">
+                            {% for pt in page_templates %}
+                            <div class="template-block mb-3 system-block-{{ pt.category }}" id="block-{{ pt.template_id }}" {% if pt.category == 'system' and hide_system_blocks %}style="display: none;"{% endif %}>
+                                <div class="template-block-header">
+                                    <div class="d-flex justify-content-between align-items-center w-100">
+                                        <div class="d-flex align-items-center">
+                                            <strong>{{ pt.title }}</strong>
+                                            <span class="badge bg-{{ 'primary' if pt.category == 'system' else 'success' }} ms-2">{{ pt.category.title() }}</span>
+                                            {% if pt.category != 'system' %}
+                                            <button type="button" class="btn btn-sm btn-outline-primary ms-2" title="Insert Media" onclick="openMediaPicker('template_{{ pt.template_id }}')">
+                                                <i class="bi bi-image"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                        <div class="sort-buttons">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBlock({{ pt.template_id }}, 'up')">
+                                                <i class="bi bi-chevron-up"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBlock({{ pt.template_id }}, 'down')">
+                                                <i class="bi bi-chevron-down"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="mb-2">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input use-default-checkbox"
+                                                   id="use_default_{{ pt.template_id }}" name="use_default_{{ pt.template_id }}"
+                                                   {{ 'checked' if pt.use_default else '' }}
+                                                   onchange="toggleDefaultContent(this, 'template_{{ pt.template_id }}')">
+                                            <label class="form-check-label" for="use_default_{{ pt.template_id }}">
+                                                Use default template content
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="sort_order_{{ pt.template_id }}" value="{{ pt.sort_order }}">
+                                    <textarea class="form-control code-html {{ 'grayed-textarea' if pt.use_default else '' }}"
+                                              id="template_{{ pt.template_id }}" name="template_{{ pt.template_id }}"
+                                              rows="8" {{ 'readonly' if pt.use_default else '' }}>{{ pt.custom_content if not pt.use_default else pt.default_content }}</textarea>
+                                    <input type="hidden" id="default_content_{{ pt.template_id }}" value="{{ pt.default_content }}">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Template block sorting
+function moveBlock(blockId, direction) {
+    const block = document.getElementById('block-' + blockId);
+    const container = block.parentElement;
+
+    if (direction === 'up') {
+        const prevBlock = block.previousElementSibling;
+        if (prevBlock) {
+            container.insertBefore(block, prevBlock);
+        }
+    } else {
+        const nextBlock = block.nextElementSibling;
+        if (nextBlock) {
+            container.insertBefore(nextBlock, block);
+        }
+    }
+
+    // Update sort order inputs
+    updateSortOrder(container);
+}
+
+function updateSortOrder(container) {
+    const blocks = container.querySelectorAll('[id^="block-"]');
+    blocks.forEach((block, index) => {
+        const sortInput = block.querySelector('input[name^="sort_order_"]');
+        if (sortInput) {
+            sortInput.value = index;
+        }
+    });
+}
+
+// Toggle default content
+function toggleDefaultContent(checkbox, textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (checkbox.checked) {
+        textarea.classList.add('grayed-textarea');
+        textarea.readOnly = true;
+        // Load default content
+        const defaultContentId = textareaId.replace('template_', 'default_content_');
+        const defaultContent = document.getElementById(defaultContentId);
+        if (defaultContent) {
+            // Hidden input stores default content in value attribute
+            const value = defaultContent.value !== undefined ? defaultContent.value : defaultContent.textContent;
+            textarea.value = value || '';
+        }
+        // If CodeMirror is attached, set readOnly there too
+        const cm = (textarea && textarea._cm) || (textarea && textarea.nextElementSibling && textarea.nextElementSibling.CodeMirror) || null;
+        if (cm) {
+            cm.setOption('readOnly', true);
+            cm.setValue(textarea.value);
+            cm.refresh();
+        }
+    } else {
+        textarea.classList.remove('grayed-textarea');
+        textarea.readOnly = false;
+        // If CodeMirror is attached, disable readOnly so it becomes editable
+        const cm = (textarea && textarea._cm) || (textarea && textarea.nextElementSibling && textarea.nextElementSibling.CodeMirror) || null;
+        if (cm) {
+            cm.setOption('readOnly', false);
+            cm.refresh();
+            // Optionally focus so user can start typing immediately
+            cm.focus();
+        }
+    }
+}
+
+// Handle system blocks toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggleSystemBlocks');
+    const systemBlocks = document.querySelectorAll('.system-block-system');
+    let systemBlocksHidden = {{ 'true' if hide_system_blocks else 'false' }};
+
+    function updateToggleButton() {
+        if (systemBlocksHidden) {
+            toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i> Show System Blocks';
+            toggleBtn.classList.remove('btn-outline-success');
+            toggleBtn.classList.add('btn-outline-secondary');
+        } else {
+            toggleBtn.innerHTML = '<i class="bi bi-eye"></i> Hide System Blocks';
+            toggleBtn.classList.remove('btn-outline-secondary');
+            toggleBtn.classList.add('btn-outline-success');
+        }
+    }
+
+    if (toggleBtn) {
+        // Set initial state
+        updateToggleButton();
+
+        toggleBtn.addEventListener('click', function() {
+            systemBlocksHidden = !systemBlocksHidden;
+
+            systemBlocks.forEach(block => {
+                if (systemBlocksHidden) {
+                    block.style.display = 'none';
+                } else {
+                    block.style.display = 'block';
+                }
+            });
+
+            // When showing hidden blocks, refresh CodeMirror so editors render correctly
+            if (!systemBlocksHidden && window.CodeMirror) {
+                setTimeout(function() {
+                    document.querySelectorAll('.system-block-system .CodeMirror').forEach(function(el) {
+                        if (el && el.CodeMirror) {
+                            el.CodeMirror.refresh();
+                        }
+                    });
+                }, 0);
+            }
+
+            updateToggleButton();
+        });
+    }
+});
+</script>
+<!-- Media Picker Modal -->
+<div class="modal" tabindex="-1" id="mediaPickerModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Insert Media</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row" id="mediaPickerGrid"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+ </div>
+<script>
+let activeEditor = null;
+function openMediaPicker(targetTextareaId) {
+    // Set active editor as the provided textarea or currently focused editor
+    activeEditor = targetTextareaId ? document.getElementById(targetTextareaId) : document.activeElement;
+    if (!activeEditor) activeEditor = document.activeElement;
+    if (activeEditor && activeEditor.classList.contains && activeEditor.classList.contains('CodeMirror-focused')) {
+        activeEditor = activeEditor.closest('.CodeMirror').previousSibling;
+    }
+    fetch('{{ url_for('media.media_list_json') }}').then(r => r.json()).then(data => {
+        const grid = document.getElementById('mediaPickerGrid');
+        grid.innerHTML = '';
+        (data.media || []).forEach(item => {
+            const col = document.createElement('div');
+            col.className = 'col-6 col-md-3 mb-3';
+            col.innerHTML = `<div class="card h-100">
+                <img src="${item.small || item.original}" class="card-img-top" alt="${item.alt}">
+                <div class="card-body p-2">
+                  <div class="btn-group w-100">
+                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.small || item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Small</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.medium || item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Medium</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.large || item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Large</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Original</button>
+                  </div>
+                </div>
+              </div>`;
+            grid.appendChild(col);
+        });
+        const modal = new bootstrap.Modal(document.getElementById('mediaPickerModal'));
+        modal.show();
+    });
+}
+function insertImg(src, alt, title) {
+    const tag = `<img src="${src}" alt="${alt}" title="${title}">`;
+    const cmEl = document.querySelector('.CodeMirror-focused');
+    if (cmEl && cmEl.CodeMirror) {
+        cmEl.CodeMirror.replaceSelection(tag);
+        cmEl.CodeMirror.focus();
+    } else if (activeEditor && activeEditor.tagName === 'TEXTAREA') {
+        const ta = activeEditor;
+        const start = ta.selectionStart; const end = ta.selectionEnd;
+        ta.value = ta.value.substring(0, start) + tag + ta.value.substring(end);
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = start + tag.length;
+    }
+    const modalEl = document.getElementById('mediaPickerModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+}
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/neo.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.CodeMirror) {
+        document.querySelectorAll('textarea.code-html').forEach(function(ta) {
+            const cm = CodeMirror.fromTextArea(ta, {
+                lineNumbers: true,
+                mode: 'text/html',
+                theme: 'neo',
+                viewportMargin: Infinity,
+                readOnly: ta.hasAttribute('readonly')
+            });
+            // Keep a handle to the CM instance for later toggling readOnly
+            ta._cm = cm;
+        });
+    }
+});
+</script>
+{% endblock %}

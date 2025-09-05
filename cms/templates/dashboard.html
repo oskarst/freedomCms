@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            {# Flash messages are already rendered in base.html #}
+            <div class="row">
+                <div class="col-md-12">
+                    <h1 class="mb-4">Dashboard</h1>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary mb-3">
+                        <div class="card-body">
+                            <div class="card-title">
+                                <i class="bi bi-file-earmark-text"></i> Pages
+                            </div>
+                            <h3>{{ pages_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-success mb-3">
+                        <div class="card-body">
+                            <div class="card-title">
+                                <i class="bi bi-braces"></i> Templates
+                            </div>
+                            <h3>{{ templates_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-info mb-3">
+                        <div class="card-body">
+                            <div class="card-title">
+                                <i class="bi bi-people"></i> Users
+                            </div>
+                            <h3>{{ users_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-warning mb-3">
+                        <div class="card-body">
+                            <div class="card-title">
+                                <i class="bi bi-gear"></i> Published
+                            </div>
+                            <h3>{{ published_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Recent Activity</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Welcome to Devall CMS! Use the navigation menu above to manage your content.</p>
+                            <ul>
+                                <li>Create and edit pages using the Pages section</li>
+                                <li>Customize templates in the Templates section</li>
+                                <li>Manage users and settings</li>
+                                <li>Publish pages to generate static HTML files</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

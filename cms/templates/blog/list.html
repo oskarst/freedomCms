@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% set title = "Blog Posts" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Blog Posts</h1>
+        <div class="d-flex gap-2">
+            <form method="post" action="{{ url_for('blog.blog_generate_index') }}" class="d-inline">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-file-earmark-richtext"></i> Generate Blog Index
+                </button>
+            </form>
+            <a href="{{ url_for('blog.blog_categories') }}" class="btn btn-outline-secondary">Categories</a>
+            <a href="{{ url_for('blog.blog_add') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Post
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Slug</th>
+                            <th>Featured</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for post in posts %}
+                        <tr>
+                            <td>{{ post.title }}</td>
+                            <td><code>{{ post.slug }}</code></td>
+                            <td>{% if post.featured %}<span class="badge bg-info">Featured</span>{% else %}-{% endif %}</td>
+                            <td>{% if post.published %}<span class="badge bg-success">Published</span>{% else %}<span class="badge bg-warning">Draft</span>{% endif %}</td>
+                            <td>{{ post.created_at[:10] }}</td>
+                            <td>
+                                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('blog.blog_edit', post_id=post.id) }}">Edit</a>
+                                <form method="post" action="{{ url_for('blog.blog_delete', post_id=post.id) }}" class="d-inline" onsubmit="return confirm('Delete this post?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

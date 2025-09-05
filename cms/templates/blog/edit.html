@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% set title = "Edit Blog Post" %}
+
+{% block content %}
+<div class="container-fluid">
+    <form method="post">
+        <input type="hidden" name="action" value="save">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Edit Blog Post</h1>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('blog.blog_list') }}" class="btn btn-outline-secondary">Back to Posts</a>
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="{{ url_for('blog.blog_preview', post_id=post.id) }}" target="_blank" class="btn btn-outline-info">Preview</a>
+                <button type="submit" formaction="{{ url_for('blog.blog_edit', post_id=post.id) }}" onclick="this.form.action=this.getAttribute('formaction'); this.form.elements.action.value='publish'" class="btn btn-success">Publish</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label" for="title">Title</label>
+                    <input class="form-control" id="title" name="title" value="{{ post.title }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="slug">Slug</label>
+                    <input class="form-control" id="slug" name="slug" value="{{ post.slug }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="excerpt">Excerpt</label>
+                    <textarea class="form-control" id="excerpt" name="excerpt" rows="2">{{ post.excerpt or '' }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="featured_image_url">Featured Image URL</label>
+                    <input class="form-control" id="featured_image_url" name="featured_image_url" value="{{ post.featured_image_url or '' }}" placeholder="/pub/content/images/...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="content">Content</label>
+                    <textarea class="form-control ckeditor" id="content" name="content" rows="12">{{ post.content or '' }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Categories</label>
+                    <div>
+                        {% for c in categories %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="cat_{{ c.id }}" name="categories" value="{{ c.id }}" {{ 'checked' if c.id in selected_categories else '' }}>
+                            <label class="form-check-label" for="cat_{{ c.id }}">{{ c.name }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="featured" name="featured" {{ 'checked' if post.featured else '' }}>
+                    <label class="form-check-label" for="featured">Featured</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Blog Templates</h5>
+            </div>
+            <div class="card-body">
+                {% if post_templates and post_templates|length > 0 %}
+                    {% for bt in post_templates %}
+                    <div class="template-block mb-3" id="bblock-{{ bt.template_id }}">
+                        <div class="template-block-header">
+                            <div class="d-flex justify-content-between align-items-center w-100">
+                                <div class="d-flex align-items-center">
+                                    <strong>{{ bt.title }}</strong>
+                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" title="Insert Media" onclick="openMediaPicker('bt_template_{{ bt.template_id }}')">
+                                        <i class="bi bi-image"></i>
+                                    </button>
+                                </div>
+                                <div class="sort-buttons">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBBlock({{ bt.template_id }}, 'up')">
+                                        <i class="bi bi-chevron-up"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBBlock({{ bt.template_id }}, 'down')">
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input use-default-blog" type="checkbox" id="bt_use_default_{{ bt.template_id }}" name="bt_use_default_{{ bt.template_id }}" {{ 'checked' if bt.use_default else '' }} data-target="bt_template_{{ bt.template_id }}">
+                                <label class="form-check-label" for="bt_use_default_{{ bt.template_id }}">Use default for {{ bt.title }}</label>
+                            </div>
+                            <input type="hidden" name="sort_order_{{ bt.template_id }}" value="{{ bt.sort_order }}">
+                            <textarea class="form-control code-html-blog" id="bt_template_{{ bt.template_id }}" name="bt_template_{{ bt.template_id }}" rows="6" {{ 'readonly' if bt.use_default else '' }}>{{ bt.custom_content if not bt.use_default else bt.default_content }}</textarea>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-muted">No blog template blocks attached yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.ckeditor.com/4.25.1/standard/ckeditor.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.CKEDITOR) {
+        CKEDITOR.replace('content');
+    }
+});
+</script>
+<!-- Media Picker Modal (reused) -->
+<div class="modal" tabindex="-1" id="mediaPickerModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Insert Media</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row" id="mediaPickerGrid"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+ </div>
+<script>
+let activeEditor = null;
+function openMediaPicker() {
+    activeEditor = document.activeElement;
+    if (activeEditor && activeEditor.classList && activeEditor.classList.contains('CodeMirror-focused')) {
+        activeEditor = activeEditor.closest('.CodeMirror').previousSibling;
+    }
+    fetch('{{ url_for('media.media_list_json') }}').then(r => r.json()).then(data => {
+        const grid = document.getElementById('mediaPickerGrid');
+        grid.innerHTML = '';
+        (data.media || []).forEach(item => {
+            const col = document.createElement('div');
+            col.className = 'col-6 col-md-3 mb-3';
+            col.innerHTML = `<div class="card h-100">
+                <img src="${item.small || item.original}" class="card-img-top" alt="${item.alt}">
+                <div class="card-body p-2">
+                  <div class="btn-group w-100">
+                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.small || item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Small</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.medium || item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Medium</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.large || item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Large</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Original</button>
+                  </div>
+                </div>
+              </div>`;
+            grid.appendChild(col);
+        });
+        const modal = new bootstrap.Modal(document.getElementById('mediaPickerModal'));
+        modal.show();
+    });
+}
+function insertImg(src, alt, title) {
+    const tag = `<img src="${src}" alt="${alt}" title="${title}">`;
+    const cmEl = document.querySelector('.CodeMirror-focused');
+    if (cmEl && cmEl.CodeMirror) {
+        cmEl.CodeMirror.replaceSelection(tag);
+        cmEl.CodeMirror.focus();
+    } else if (activeEditor && activeEditor.tagName === 'TEXTAREA') {
+        const ta = activeEditor;
+        const start = ta.selectionStart; const end = ta.selectionEnd;
+        ta.value = ta.value.substring(0, start) + tag + ta.value.substring(end);
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = start + tag.length;
+    }
+    const modalEl = document.getElementById('mediaPickerModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+}
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/neo.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.CodeMirror) {
+        document.querySelectorAll('textarea.code-html-blog').forEach(function(ta) {
+            const cm = CodeMirror.fromTextArea(ta, {
+                lineNumbers: true,
+                mode: 'text/html',
+                theme: 'neo',
+                viewportMargin: Infinity,
+                readOnly: ta.hasAttribute('readonly')
+            });
+            ta._cm = cm;
+        });
+    }
+    // Toggle default for blog template blocks
+    document.querySelectorAll('.use-default-blog').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            const targetId = cb.getAttribute('data-target');
+            const ta = document.getElementById(targetId);
+            if (!ta) return;
+            if (cb.checked) {
+                ta.setAttribute('readonly', 'readonly');
+                if (ta._cm) { ta._cm.setOption('readOnly', true); ta._cm.refresh(); }
+            } else {
+                ta.removeAttribute('readonly');
+                if (ta._cm) { ta._cm.setOption('readOnly', false); ta._cm.refresh(); ta._cm.focus(); }
+            }
+        });
+    });
+
+    // Sorting for blog template blocks
+    window.moveBBlock = function(blockId, direction) {
+        const block = document.getElementById('bblock-' + blockId);
+        const container = block.parentElement;
+        if (direction === 'up') {
+            const prev = block.previousElementSibling;
+            if (prev) { container.insertBefore(block, prev); }
+        } else {
+            const next = block.nextElementSibling;
+            if (next) { container.insertBefore(next, block); }
+        }
+        // Update hidden sort inputs
+        updateBSort(container);
+    };
+
+    function updateBSort(container) {
+        const blocks = container.querySelectorAll('[id^="bblock-"]');
+        blocks.forEach((block, index) => {
+            const sortInput = block.querySelector('input[name^="sort_order_"]');
+            if (sortInput) { sortInput.value = index; }
+        });
+    }
+});
+</script>
+{% endblock %}
+
