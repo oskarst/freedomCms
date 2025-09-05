@@ -14,6 +14,7 @@ from cms.views.users import bp as users_bp
 from cms.views.settings import bp as settings_bp
 from cms.views.blog import bp as blog_bp
 from cms.views.help import bp as help_bp
+from cms.views.filemanager import bp as files_bp
 from cms.views.media import bp as media_bp
 
 def create_app():
@@ -49,6 +50,7 @@ def create_app():
     app.register_blueprint(settings_bp, url_prefix='/admin')
     app.register_blueprint(blog_bp, url_prefix='/admin')
     app.register_blueprint(help_bp, url_prefix='/admin')
+    app.register_blueprint(files_bp, url_prefix='/admin')
     app.register_blueprint(media_bp, url_prefix='/admin')
 
     # Root route - redirect to login or dashboard
