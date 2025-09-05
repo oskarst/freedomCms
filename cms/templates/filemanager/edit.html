@@ -16,15 +16,18 @@
   </div>
 
   <div class="card">
-    <div class="card-body">
-      <form method="post">
-        <div class="mb-3">
-          <label class="form-label">Content</label>
-          <textarea id="content" name="content" class="form-control" rows="20">{{ content }}</textarea>
+    <div class="card-body p-0">
+      <form method="post" class="d-flex flex-column" style="height: calc(100vh - 200px);">
+        <div class="flex-grow-1 d-flex flex-column">
+          <div class="flex-grow-1">
+            <textarea id="content" name="content" class="form-control h-100" style="resize: none;">{{ content }}</textarea>
+          </div>
         </div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary" type="submit" name="action" value="save"><i class="bi bi-save"></i> Save</button>
-          <button class="btn btn-outline-danger" type="submit" name="action" value="delete" onclick="return confirm('Delete this file?')"><i class="bi bi-trash"></i> Delete</button>
+        <div class="p-3 border-top bg-light">
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary" type="submit" name="action" value="save"><i class="bi bi-save"></i> Save</button>
+            <button class="btn btn-outline-danger" type="submit" name="action" value="delete" onclick="return confirm('Delete this file?')"><i class="bi bi-trash"></i> Delete</button>
+          </div>
         </div>
       </form>
     </div>
@@ -47,12 +50,24 @@ document.addEventListener('DOMContentLoaded', function() {
       mode: 'text/html',
       theme: 'neo',
       viewportMargin: Infinity,
+      lineWrapping: true,
     });
     ta.style.display = 'none';
+    
+    // Make CodeMirror fill the available height
+    const container = cm.getWrapperElement();
+    container.style.height = '100%';
+    cm.setSize(null, '100%');
+    
     const form = ta.closest('form');
     if (form) {
       form.addEventListener('submit', function(){ cm.save(); });
     }
+    
+    // Refresh on window resize
+    window.addEventListener('resize', function() {
+      cm.refresh();
+    });
   }
 });
 </script>
