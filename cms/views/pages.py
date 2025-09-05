@@ -284,10 +284,15 @@ def add_page():
         default_templates = cursor.fetchall()
 
         for template in default_templates:
+            # Get template title
+            cursor.execute('SELECT title FROM page_template_defs WHERE id = ?', (template['id'],))
+            template_info = cursor.fetchone()
+            default_title = template_info['title'] if template_info else 'Untitled Block'
+            
             cursor.execute('''
-                INSERT INTO page_templates (page_id, template_id, sort_order)
-                VALUES (?, ?, ?)
-            ''', (page_id, template['id'], template['sort_order']))
+                INSERT INTO page_templates (page_id, template_id, title, sort_order)
+                VALUES (?, ?, ?, ?)
+            ''', (page_id, template['id'], default_title, template['sort_order']))
 
         db.commit()
         flash('Page created successfully', 'success')
@@ -319,13 +324,15 @@ def edit_page(page_id):
             existing_templates = cursor.fetchall()
 
             for pt in existing_templates:
-                template_key = f'template_{pt["template_id"]}'
-                use_default = request.form.get(f'use_default_{pt["template_id"]}') == 'on'
+                template_key = f'template_{pt["id"]}'
+                title_key = f'title_{pt["id"]}'
+                use_default = request.form.get(f'use_default_{pt["id"]}') == 'on'
                 custom_content = request.form.get(template_key, '')
-                sort_order = request.form.get(f'sort_order_{pt["template_id"]}', 0)
+                custom_title = request.form.get(title_key, '')
+                sort_order = request.form.get(f'sort_order_{pt["id"]}', 0)
 
-                cursor.execute('UPDATE page_templates SET custom_content = ?, use_default = ?, sort_order = ? WHERE id = ?',
-                             (custom_content, use_default, sort_order, pt['id']))
+                cursor.execute('UPDATE page_templates SET title = ?, custom_content = ?, use_default = ?, sort_order = ? WHERE id = ?',
+                             (custom_title, custom_content, use_default, sort_order, pt['id']))
 
             db.commit()
             flash('Page saved successfully', 'success')
@@ -336,6 +343,51 @@ def edit_page(page_id):
             cursor.execute('UPDATE pages SET published = 1 WHERE id = ?', (page_id,))
             db.commit()
             flash('Page published successfully', 'success')
+
+        elif action == 'add_template':
+            # Add new template block to page
+            template_id = request.form.get('template_id')
+            
+            if template_id:
+                # Get template info for default title
+                cursor.execute('SELECT title FROM page_template_defs WHERE id = ?', (template_id,))
+                template_info = cursor.fetchone()
+                default_title = template_info['title'] if template_info else 'Untitled Block'
+                
+                # Get next sort order
+                cursor.execute('SELECT COALESCE(MAX(sort_order), 0) as maxo FROM page_templates WHERE page_id = ?', (page_id,))
+                max_order_row = cursor.fetchone()
+                next_order = (max_order_row['maxo'] or 0) + 1
+                
+                # Insert new page template (allow multiple instances of same template)
+                cursor.execute('''
+                    INSERT INTO page_templates (page_id, template_id, title, use_default, sort_order)
+                    VALUES (?, ?, ?, 1, ?)
+                ''', (page_id, template_id, default_title, next_order))
+                db.commit()
+                flash('Template block added successfully', 'success')
+            else:
+                flash('Please select a template to add', 'error')
+
+        elif action == 'remove_template':
+            # Remove template block from page
+            page_template_id = request.form.get('page_template_id')
+            if page_template_id:
+                # Check if it's a system template (don't allow removal)
+                cursor.execute('''
+                    SELECT t.category FROM page_templates pt
+                    JOIN page_template_defs t ON pt.template_id = t.id
+                    WHERE pt.id = ? AND pt.page_id = ?
+                ''', (page_template_id, page_id))
+                template_info = cursor.fetchone()
+                if template_info and template_info['category'] == 'system':
+                    flash('Cannot remove system template blocks', 'error')
+                else:
+                    cursor.execute('DELETE FROM page_templates WHERE id = ? AND page_id = ?', (page_template_id, page_id))
+                    db.commit()
+                    flash('Template block removed successfully', 'success')
+            else:
+                flash('Invalid template ID', 'error')
 
         return redirect(url_for('pages.edit_page', page_id=page_id))
 
@@ -352,17 +404,22 @@ def edit_page(page_id):
         next_order = (max_order_row['maxo'] or 0) + 1
         to_insert = [tid for tid in default_ids if tid not in existing_ids]
         for tid in to_insert:
+            # Get template title for default
+            cursor.execute('SELECT title FROM page_template_defs WHERE id = ?', (tid,))
+            template_info = cursor.fetchone()
+            default_title = template_info['title'] if template_info else 'Untitled Block'
+            
             cursor.execute('''
-                INSERT INTO page_templates (page_id, template_id, use_default, sort_order)
-                VALUES (?, ?, 1, ?)
-            ''', (page_id, tid, next_order))
+                INSERT INTO page_templates (page_id, template_id, title, use_default, sort_order)
+                VALUES (?, ?, ?, 1, ?)
+            ''', (page_id, tid, default_title, next_order))
             next_order += 1
         if to_insert:
             db.commit()
 
     # Get page templates
     cursor.execute('''
-        SELECT pt.id, pt.template_id, pt.custom_content, pt.use_default, pt.sort_order,
+        SELECT pt.id, pt.template_id, pt.title as custom_title, pt.custom_content, pt.use_default, pt.sort_order,
                t.title, t.slug, t.content as default_content, t.category
         FROM page_templates pt
         JOIN page_template_defs t ON pt.template_id = t.id
@@ -376,7 +433,11 @@ def edit_page(page_id):
     setting = cursor.fetchone()
     hide_system_blocks = setting and setting['value'] == '1'
 
-    return render_template('pages/edit.html', page=page, page_templates=page_templates, hide_system_blocks=hide_system_blocks)
+    # Get all available page templates for the dropdown
+    cursor.execute('SELECT id, title, slug, category FROM page_template_defs ORDER BY category, title')
+    available_templates = cursor.fetchall()
+
+    return render_template('pages/edit.html', page=page, page_templates=page_templates, hide_system_blocks=hide_system_blocks, available_templates=available_templates)
 
 @bp.route('/pages/<int:page_id>/delete', methods=['POST'])
 @login_required

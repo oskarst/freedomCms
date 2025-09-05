@@ -3,6 +3,12 @@
 
 {% block content %}
 <div class="container-fluid">
+    <!-- Add Template Form (Independent) -->
+    <form method="post" action="{{ url_for('pages.edit_page', page_id=page.id) }}" class="d-none" id="addTemplateForm" onsubmit="return validateTemplateSelection(this)">
+        <input type="hidden" name="action" value="add_template">
+        <input type="hidden" name="template_id" id="selectedTemplateId">
+    </form>
+
     <form method="post" id="pageForm">
         <input type="hidden" name="action" value="save">
 
@@ -38,32 +44,57 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5>Page Templates</h5>
-                        <button type="button" id="toggleSystemBlocks" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-eye-slash"></i> Show System Blocks
-                        </button>
+                        <div class="d-flex gap-2">
+                            <select id="templateSelect" class="form-select form-select-sm" style="width: auto;">
+                                <option value="">Select template to add...</option>
+                                {% for template in available_templates %}
+                                    <option value="{{ template.id }}">{{ template.title }} ({{ template.category }})</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="addSelectedTemplate()">
+                                <i class="bi bi-plus"></i> Add Template
+                            </button>
+                            <button type="button" id="toggleSystemBlocks" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye-slash"></i> Show System Blocks
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div id="templateBlocks">
                             {% for pt in page_templates %}
-                            <div class="template-block mb-3 system-block-{{ pt.category }}" id="block-{{ pt.template_id }}" {% if pt.category == 'system' and hide_system_blocks %}style="display: none;"{% endif %}>
+                            <div class="template-block mb-3 system-block-{{ pt.category }}" id="block-{{ pt.id }}" {% if pt.category == 'system' and hide_system_blocks %}style="display: none;"{% endif %}>
                                 <div class="template-block-header">
                                     <div class="d-flex justify-content-between align-items-center w-100">
                                         <div class="d-flex align-items-center">
-                                            <strong>{{ pt.title }}</strong>
+                                            <input type="text" class="form-control form-control-sm border-0 bg-transparent fw-bold" 
+                                                   name="title_{{ pt.id }}" value="{{ pt.custom_title or pt.title }}" 
+                                                   placeholder="{{ pt.title }}" style="width: auto; min-width: 150px;">
+                                            {% set template_count = page_templates | selectattr('template_id', 'equalto', pt.template_id) | list | length %}
+                                            {% if template_count > 1 %}
+                                                {% set instance_num = page_templates[:loop.index] | selectattr('template_id', 'equalto', pt.template_id) | list | length %}
+                                                <span class="badge bg-info ms-1">#{{ instance_num }}</span>
+                                            {% endif %}
                                             <span class="badge bg-{{ 'primary' if pt.category == 'system' else 'success' }} ms-2">{{ pt.category.title() }}</span>
                                             {% if pt.category != 'system' %}
-                                            <button type="button" class="btn btn-sm btn-outline-primary ms-2" title="Insert Media" onclick="openMediaPicker('template_{{ pt.template_id }}')">
+                                            <button type="button" class="btn btn-sm btn-outline-primary ms-2" title="Insert Media" onclick="openMediaPicker('template_{{ pt.id }}')">
                                                 <i class="bi bi-image"></i>
                                             </button>
                                             {% endif %}
                                         </div>
-                                        <div class="sort-buttons">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBlock({{ pt.template_id }}, 'up')">
-                                                <i class="bi bi-chevron-up"></i>
+                                        <div class="d-flex gap-1">
+                                            <div class="sort-buttons">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBlock({{ pt.id }}, 'up')">
+                                                    <i class="bi bi-chevron-up"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBlock({{ pt.id }}, 'down')">
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </button>
+                                            </div>
+                                            {% if pt.category != 'system' %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBlock({{ pt.id }})" title="Remove template block">
+                                                <i class="bi bi-trash"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBlock({{ pt.template_id }}, 'down')">
-                                                <i class="bi bi-chevron-down"></i>
-                                            </button>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -71,19 +102,19 @@
                                     <div class="mb-2">
                                         <div class="form-check">
                                             <input type="checkbox" class="form-check-input use-default-checkbox"
-                                                   id="use_default_{{ pt.template_id }}" name="use_default_{{ pt.template_id }}"
+                                                   id="use_default_{{ pt.id }}" name="use_default_{{ pt.id }}"
                                                    {{ 'checked' if pt.use_default else '' }}
-                                                   onchange="toggleDefaultContent(this, 'template_{{ pt.template_id }}')">
-                                            <label class="form-check-label" for="use_default_{{ pt.template_id }}">
+                                                   onchange="toggleDefaultContent(this, 'template_{{ pt.id }}')">
+                                            <label class="form-check-label" for="use_default_{{ pt.id }}">
                                                 Use default template content
                                             </label>
                                         </div>
                                     </div>
-                                    <input type="hidden" name="sort_order_{{ pt.template_id }}" value="{{ pt.sort_order }}">
+                                    <input type="hidden" name="sort_order_{{ pt.id }}" value="{{ pt.sort_order }}">
                                     <textarea class="form-control code-html {{ 'grayed-textarea' if pt.use_default else '' }}"
-                                              id="template_{{ pt.template_id }}" name="template_{{ pt.template_id }}"
+                                              id="template_{{ pt.id }}" name="template_{{ pt.id }}"
                                               rows="8" {{ 'readonly' if pt.use_default else '' }}>{{ pt.custom_content if not pt.use_default else pt.default_content }}</textarea>
-                                    <input type="hidden" id="default_content_{{ pt.template_id }}" value="{{ pt.default_content }}">
+                                    <input type="hidden" id="default_content_{{ pt.id }}" value="{{ pt.default_content }}">
                                 </div>
                             </div>
                             {% endfor %}
@@ -99,8 +130,8 @@
 {% block extra_scripts %}
 <script>
 // Template block sorting
-function moveBlock(blockId, direction) {
-    const block = document.getElementById('block-' + blockId);
+function moveBlock(pageTemplateId, direction) {
+    const block = document.getElementById('block-' + pageTemplateId);
     const container = block.parentElement;
 
     if (direction === 'up') {
@@ -278,6 +309,60 @@ function insertImg(src, alt, title) {
     const modalEl = document.getElementById('mediaPickerModal');
     const modal = bootstrap.Modal.getInstance(modalEl);
     if (modal) modal.hide();
+}
+
+// Remove template block
+function removeBlock(pageTemplateId) {
+    if (confirm('Are you sure you want to remove this template block?')) {
+        // Create a form to submit the removal
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = window.location.href;
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'remove_template';
+        
+        const pageTemplateIdInput = document.createElement('input');
+        pageTemplateIdInput.type = 'hidden';
+        pageTemplateIdInput.name = 'page_template_id';
+        pageTemplateIdInput.value = pageTemplateId;
+        
+        form.appendChild(actionInput);
+        form.appendChild(pageTemplateIdInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Add selected template
+function addSelectedTemplate() {
+    const select = document.getElementById('templateSelect');
+    
+    if (!select.value) {
+        alert('Please select a template to add.');
+        select.focus();
+        return;
+    }
+    
+    // Set the selected template ID in the hidden form
+    document.getElementById('selectedTemplateId').value = select.value;
+    
+    // Submit the add template form
+    document.getElementById('addTemplateForm').submit();
+}
+
+// Validate template selection before adding (for form onsubmit)
+function validateTemplateSelection(form) {
+    const templateId = document.getElementById('selectedTemplateId').value;
+    
+    if (!templateId) {
+        alert('Please select a template to add.');
+        return false;
+    }
+    
+    return true;
 }
 </script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
