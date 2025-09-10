@@ -20,6 +20,11 @@
                     <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#importModal">
                         <i class="bi bi-upload"></i> Import
                     </button>
+                    <form method="post" action="{{ url_for('pages.republish_all_pages') }}" class="d-inline" onsubmit="return confirm('This will republish all pages. Are you sure?')">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-arrow-clockwise"></i> Re-publish All Pages
+                        </button>
+                    </form>
                     <a href="{{ url_for('pages.add_page') }}" class="btn btn-primary">
                         <i class="bi bi-plus-circle"></i> Add Page
                     </a>

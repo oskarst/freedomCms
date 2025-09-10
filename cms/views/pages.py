@@ -456,8 +456,14 @@ def edit_page(page_id):
                     pass
                 else:
                     # Advanced mode: update everything
-                    cursor.execute('UPDATE page_templates SET title = ?, custom_content = ?, use_default = ?, sort_order = ? WHERE id = ?',
-                                 (custom_title, custom_content, use_default, sort_order, pt['id']))
+                    if use_default:
+                        # When using default, don't save custom_content - always use current default template
+                        cursor.execute('UPDATE page_templates SET title = ?, custom_content = NULL, use_default = ?, sort_order = ? WHERE id = ?',
+                                     (custom_title, use_default, sort_order, pt['id']))
+                    else:
+                        # When using custom content, save the custom content
+                        cursor.execute('UPDATE page_templates SET title = ?, custom_content = ?, use_default = ?, sort_order = ? WHERE id = ?',
+                                     (custom_title, custom_content, use_default, sort_order, pt['id']))
                 
                 # Handle nested block parameters (works in both modes)
                 if current_page_mode == 'simple':
@@ -476,14 +482,15 @@ def edit_page(page_id):
                     else:
                         content_to_check = ''
                 else:
-                    # Advanced mode: use form data
-                    content_to_check = custom_content if custom_content else ''
-                    if not content_to_check:
-                        # Get default content from template definition
+                    # Advanced mode: use appropriate content based on use_default
+                    if use_default:
+                        # When using default, always use current default template content for parameters
                         cursor.execute('SELECT content FROM page_template_defs WHERE id = ?', (pt['template_id'],))
                         template_def = cursor.fetchone()
-                        if template_def:
-                            content_to_check = template_def['content'] or ''
+                        content_to_check = template_def['content'] if template_def else ''
+                    else:
+                        # When using custom content, use the custom content from form
+                        content_to_check = custom_content if custom_content else ''
                 
                 if content_to_check and has_parameters(content_to_check):
                     parameters = {}
@@ -680,3 +687,36 @@ def publish_page(page_id):
     if request.form.get('from_list') == '1':
         return redirect(url_for('pages.pages'))
     return redirect(url_for('pages.edit_page', page_id=page_id))
+
+@bp.route('/pages/republish-all', methods=['POST'])
+@login_required
+def republish_all_pages():
+    """Re-publish all pages to update them with latest template changes"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Get all published pages
+    cursor.execute('SELECT id, title, slug FROM pages WHERE published = 1')
+    published_pages = cursor.fetchall()
+    
+    if not published_pages:
+        flash('No published pages found to republish', 'warning')
+        return redirect(url_for('pages.pages'))
+    
+    republished_count = 0
+    errors = []
+    
+    for page in published_pages:
+        try:
+            # Generate HTML for the page
+            generate_page_html(page['id'])
+            republished_count += 1
+        except Exception as e:
+            errors.append(f"Page '{page['title']}': {str(e)}")
+    
+    if errors:
+        flash(f'Republished {republished_count} pages. Errors: {"; ".join(errors)}', 'warning')
+    else:
+        flash(f'Successfully republished {republished_count} pages', 'success')
+    
+    return redirect(url_for('pages.pages'))
