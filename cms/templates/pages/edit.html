@@ -54,15 +54,12 @@
                             <button type="button" class="btn btn-sm btn-primary" onclick="addSelectedTemplate()">
                                 <i class="bi bi-plus"></i> Add Template
                             </button>
-                            <button type="button" id="toggleSystemBlocks" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-eye-slash"></i> Show System Blocks
-                            </button>
                         </div>
                     </div>
                     <div class="card-body">
                         <div id="templateBlocks">
                             {% for pt in page_templates %}
-                            <div class="template-block mb-3 system-block-{{ pt.category }}" id="block-{{ pt.id }}" {% if pt.category == 'system' and hide_system_blocks %}style="display: none;"{% endif %}>
+                            <div class="template-block mb-3 system-block-{{ pt.category }}" id="block-{{ pt.id }}">
                                 <div class="template-block-header">
                                     <div class="d-flex justify-content-between align-items-center w-100">
                                         <div class="d-flex align-items-center">
@@ -195,54 +192,6 @@ function toggleDefaultContent(checkbox, textareaId) {
     }
 }
 
-// Handle system blocks toggle
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleBtn = document.getElementById('toggleSystemBlocks');
-    const systemBlocks = document.querySelectorAll('.system-block-system');
-    let systemBlocksHidden = {{ 'true' if hide_system_blocks else 'false' }};
-
-    function updateToggleButton() {
-        if (systemBlocksHidden) {
-            toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i> Show System Blocks';
-            toggleBtn.classList.remove('btn-outline-success');
-            toggleBtn.classList.add('btn-outline-secondary');
-        } else {
-            toggleBtn.innerHTML = '<i class="bi bi-eye"></i> Hide System Blocks';
-            toggleBtn.classList.remove('btn-outline-secondary');
-            toggleBtn.classList.add('btn-outline-success');
-        }
-    }
-
-    if (toggleBtn) {
-        // Set initial state
-        updateToggleButton();
-
-        toggleBtn.addEventListener('click', function() {
-            systemBlocksHidden = !systemBlocksHidden;
-
-            systemBlocks.forEach(block => {
-                if (systemBlocksHidden) {
-                    block.style.display = 'none';
-                } else {
-                    block.style.display = 'block';
-                }
-            });
-
-            // When showing hidden blocks, refresh CodeMirror so editors render correctly
-            if (!systemBlocksHidden && window.CodeMirror) {
-                setTimeout(function() {
-                    document.querySelectorAll('.system-block-system .CodeMirror').forEach(function(el) {
-                        if (el && el.CodeMirror) {
-                            el.CodeMirror.refresh();
-                        }
-                    });
-                }, 0);
-            }
-
-            updateToggleButton();
-        });
-    }
-});
 </script>
 <!-- Media Picker Modal -->
 <div class="modal" tabindex="-1" id="mediaPickerModal">

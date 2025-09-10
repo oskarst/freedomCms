@@ -428,16 +428,11 @@ def edit_page(page_id):
     ''', (page_id,))
     page_templates = cursor.fetchall()
 
-    # Get hide system blocks setting
-    cursor.execute('SELECT value FROM settings WHERE key = ?', ('hide_system_blocks',))
-    setting = cursor.fetchone()
-    hide_system_blocks = setting and setting['value'] == '1'
-
     # Get all available page templates for the dropdown
     cursor.execute('SELECT id, title, slug, category FROM page_template_defs ORDER BY category, title')
     available_templates = cursor.fetchall()
 
-    return render_template('pages/edit.html', page=page, page_templates=page_templates, hide_system_blocks=hide_system_blocks, available_templates=available_templates)
+    return render_template('pages/edit.html', page=page, page_templates=page_templates, available_templates=available_templates)
 
 @bp.route('/pages/<int:page_id>/delete', methods=['POST'])
 @login_required
