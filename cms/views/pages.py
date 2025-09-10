@@ -56,7 +56,7 @@ def save_template_parameters(db, page_template_id, parameters):
     
     db.commit()
 
-@bp.route('/pages')
+@bp.route('/pages', methods=['GET', 'POST'])
 @login_required
 def pages():
     """List all pages"""
@@ -100,11 +100,11 @@ def export_pages():
     cursor.execute('''
         SELECT
             p.id, p.title, p.slug, p.published, p.created_at, p.updated_at,
-            pt.id as pt_id, pt.template_id, pt.custom_content, pt.use_default, pt.sort_order,
+            pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
             t.title as template_title, t.slug as template_slug
         FROM pages p
         LEFT JOIN page_templates pt ON p.id = pt.page_id
-        LEFT JOIN templates t ON pt.template_id = t.id
+        LEFT JOIN page_template_defs t ON pt.template_id = t.id
         ORDER BY p.id, pt.sort_order
     ''')
 
@@ -127,21 +127,32 @@ def export_pages():
             }
 
         if row['pt_id']:  # Only add if there's a page template
+            # Get parameters for this template
+            cursor.execute('''
+                SELECT parameter_name, parameter_value 
+                FROM page_template_parameters 
+                WHERE page_template_id = ?
+            ''', (row['pt_id'],))
+            parameters = {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
+            
             pages_data[page_id]['templates'].append({
                 'id': row['pt_id'],
                 'template_id': row['template_id'],
                 'template_title': row['template_title'],
                 'template_slug': row['template_slug'],
+                'title': row['pt_title'],
                 'custom_content': row['custom_content'] or '',
                 'use_default': row['use_default'],
-                'sort_order': row['sort_order']
+                'sort_order': row['sort_order'],
+                'parameters': parameters
             })
 
     # Convert to list
     export_data = list(pages_data.values())
 
     # Return JSON response
-    response = bp.response_class(
+    from flask import Response
+    response = Response(
         response=json.dumps(export_data, indent=2, default=str),
         status=200,
         mimetype='application/json'
@@ -170,11 +181,11 @@ def export_selected_pages():
     cursor.execute(f'''
         SELECT
             p.id, p.title, p.slug, p.published, p.created_at, p.updated_at,
-            pt.id as pt_id, pt.template_id, pt.custom_content, pt.use_default, pt.sort_order,
+            pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
             t.title as template_title, t.slug as template_slug
         FROM pages p
         LEFT JOIN page_templates pt ON p.id = pt.page_id
-        LEFT JOIN templates t ON pt.template_id = t.id
+        LEFT JOIN page_template_defs t ON pt.template_id = t.id
         WHERE p.id IN ({placeholders})
         ORDER BY p.id, pt.sort_order
     ''', page_ids)
@@ -198,21 +209,32 @@ def export_selected_pages():
             }
 
         if row['pt_id']:  # Only add if there's a page template
+            # Get parameters for this template
+            cursor.execute('''
+                SELECT parameter_name, parameter_value 
+                FROM page_template_parameters 
+                WHERE page_template_id = ?
+            ''', (row['pt_id'],))
+            parameters = {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
+            
             pages_data[page_id]['templates'].append({
                 'id': row['pt_id'],
                 'template_id': row['template_id'],
                 'template_title': row['template_title'],
                 'template_slug': row['template_slug'],
+                'title': row['pt_title'],
                 'custom_content': row['custom_content'] or '',
                 'use_default': row['use_default'],
-                'sort_order': row['sort_order']
+                'sort_order': row['sort_order'],
+                'parameters': parameters
             })
 
     # Convert to list
     export_data = list(pages_data.values())
 
     # Return JSON response
-    response = bp.response_class(
+    from flask import Response
+    response = Response(
         response=json.dumps(export_data, indent=2, default=str),
         status=200,
         mimetype='application/json'
@@ -238,6 +260,13 @@ def import_pages(import_data, overwrite_existing, cursor):
 
             # Delete existing page if overwriting
             if existing_page and overwrite_existing:
+                # Delete parameters first (due to foreign key constraints)
+                cursor.execute('''
+                    DELETE FROM page_template_parameters 
+                    WHERE page_template_id IN (
+                        SELECT id FROM page_templates WHERE page_id = ?
+                    )
+                ''', (existing_page['id'],))
                 cursor.execute('DELETE FROM page_templates WHERE page_id = ?', (existing_page['id'],))
                 cursor.execute('DELETE FROM pages WHERE id = ?', (existing_page['id'],))
 
@@ -262,27 +291,39 @@ def import_pages(import_data, overwrite_existing, cursor):
                     template_id = None
                     template_slug = template_data.get('template_slug')
                     if template_slug:
-                        cursor.execute('SELECT id FROM templates WHERE slug = ?', (template_slug,))
+                        cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (template_slug,))
                         row = cursor.fetchone()
                         if row:
                             template_id = row['id']
                     if template_id is None and 'template_id' in template_data:
-                        cursor.execute('SELECT id FROM templates WHERE id = ?', (template_data['template_id'],))
+                        cursor.execute('SELECT id FROM page_template_defs WHERE id = ?', (template_data['template_id'],))
                         row = cursor.fetchone()
                         if row:
                             template_id = row['id']
 
                     if template_id is not None:
                         cursor.execute('''
-                            INSERT INTO page_templates (page_id, template_id, custom_content, use_default, sort_order)
-                            VALUES (?, ?, ?, ?, ?)
+                            INSERT INTO page_templates (page_id, template_id, title, custom_content, use_default, sort_order)
+                            VALUES (?, ?, ?, ?, ?, ?)
                         ''', (
                             page_id,
                             template_id,
+                            template_data.get('title', ''),
                             template_data.get('custom_content', ''),
                             template_data.get('use_default', 1),
                             template_data.get('sort_order', 0)
                         ))
+                        
+                        # Get the page template ID for parameter insertion
+                        page_template_id = cursor.lastrowid
+                        
+                        # Import parameters if they exist
+                        if 'parameters' in template_data and template_data['parameters']:
+                            for param_name, param_value in template_data['parameters'].items():
+                                cursor.execute('''
+                                    INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
+                                    VALUES (?, ?, ?)
+                                ''', (page_template_id, param_name, param_value))
                     else:
                         print(f"Warning: Template not found (slug={template_slug}, id={template_data.get('template_id')}). Skipping for page {page_data.get('slug')}")
 
