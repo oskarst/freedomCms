@@ -258,11 +258,23 @@ function openMediaPicker(targetTextareaId) {
             col.innerHTML = `<div class="card h-100">
                 <img src="${item.small || item.original}" class="card-img-top" alt="${item.alt}">
                 <div class="card-body p-2">
-                  <div class="btn-group w-100">
-                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.small || item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Small</button>
-                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.medium || item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Medium</button>
-                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.large || item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Large</button>
-                    <button class="btn btn-sm btn-outline-primary" onclick="insertImg('${item.original}', '${(item.alt||'').replace(/'/g, "&#39;")}', '${(item.title||'').replace(/'/g, "&#39;")}')">Original</button>
+                  <div class="d-grid gap-1">
+                    <div>
+                      <label class="form-label small mb-1">Small URL:</label>
+                      <input type="text" class="form-control form-control-sm" value="${item.small || item.original}" readonly onclick="this.select()">
+                    </div>
+                    <div>
+                      <label class="form-label small mb-1">Medium URL:</label>
+                      <input type="text" class="form-control form-control-sm" value="${item.medium || item.original}" readonly onclick="this.select()">
+                    </div>
+                    <div>
+                      <label class="form-label small mb-1">Large URL:</label>
+                      <input type="text" class="form-control form-control-sm" value="${item.large || item.original}" readonly onclick="this.select()">
+                    </div>
+                    <div>
+                      <label class="form-label small mb-1">Original URL:</label>
+                      <input type="text" class="form-control form-control-sm" value="${item.original}" readonly onclick="this.select()">
+                    </div>
                   </div>
                 </div>
               </div>`;
@@ -271,23 +283,6 @@ function openMediaPicker(targetTextareaId) {
         const modal = new bootstrap.Modal(document.getElementById('mediaPickerModal'));
         modal.show();
     });
-}
-function insertImg(src, alt, title) {
-    const tag = `<img src="${src}" alt="${alt}" title="${title}">`;
-    const cmEl = document.querySelector('.CodeMirror-focused');
-    if (cmEl && cmEl.CodeMirror) {
-        cmEl.CodeMirror.replaceSelection(tag);
-        cmEl.CodeMirror.focus();
-    } else if (activeEditor && activeEditor.tagName === 'TEXTAREA') {
-        const ta = activeEditor;
-        const start = ta.selectionStart; const end = ta.selectionEnd;
-        ta.value = ta.value.substring(0, start) + tag + ta.value.substring(end);
-        ta.focus();
-        ta.selectionStart = ta.selectionEnd = start + tag.length;
-    }
-    const modalEl = document.getElementById('mediaPickerModal');
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    if (modal) modal.hide();
 }
 
 // Remove template block
