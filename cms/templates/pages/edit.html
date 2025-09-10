@@ -46,7 +46,7 @@
                         <h5>Page Templates</h5>
                         <div class="d-flex gap-2">
                             <select id="templateSelect" class="form-select form-select-sm" style="width: auto;">
-                                <option value="">Select template to add...</option>
+                                <option value="">Select template block to add...</option>
                                 {% for template in available_templates %}
                                     <option value="{{ template.id }}">{{ template.title }} ({{ template.category }})</option>
                                 {% endfor %}
@@ -96,23 +96,11 @@
                                 </div>
                                 <div class="template-block-content collapse" id="content-{{ pt.id }}">
                                     <div class="p-3">
-                                        <div class="mb-2">
-                                            <div class="form-check">
-                                                <input type="checkbox" class="form-check-input use-default-checkbox"
-                                                       id="use_default_{{ pt.id }}" name="use_default_{{ pt.id }}"
-                                                       {{ 'checked' if pt.use_default else '' }}
-                                                       onchange="toggleDefaultContent(this, 'template_{{ pt.id }}')">
-                                                <label class="form-check-label" for="use_default_{{ pt.id }}">
-                                                    Use default template content
-                                                </label>
-                                            </div>
-                                        </div>
                                         <input type="hidden" name="sort_order_{{ pt.id }}" value="{{ pt.sort_order }}">
                                         
                                         {% if pt.has_parameters %}
                                         <!-- Parameter inputs for nested blocks -->
                                         <div class="mb-3" id="parameters-{{ pt.id }}">
-                                            <h6 class="text-muted mb-2">Block Parameters:</h6>
                                             {% for param_name in pt.parameter_names %}
                                             <div class="mb-2">
                                                 <label class="form-label small">{{ param_name }}:</label>
@@ -124,6 +112,19 @@
                                             {% endfor %}
                                         </div>
                                         {% endif %}
+                                        
+                                        <div class="mb-2">
+                                            <h6 class="text-muted mb-2">Template Block Code:</h6>
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input use-default-checkbox"
+                                                       id="use_default_{{ pt.id }}" name="use_default_{{ pt.id }}"
+                                                       {{ 'checked' if pt.use_default else '' }}
+                                                       onchange="toggleDefaultContent(this, 'template_{{ pt.id }}')">
+                                                <label class="form-check-label" for="use_default_{{ pt.id }}">
+                                                    Use default template content
+                                                </label>
+                                            </div>
+                                        </div>
                                         
                                         <textarea class="form-control code-html {{ 'grayed-textarea' if pt.use_default else '' }}"
                                                   id="template_{{ pt.id }}" name="template_{{ pt.id }}"
