@@ -60,12 +60,12 @@
                         <div id="templateBlocks">
                             {% for pt in page_templates %}
                             <div class="template-block mb-3 system-block-{{ pt.category }}" id="block-{{ pt.id }}">
-                                <div class="template-block-header">
+                                <div class="template-block-header" onclick="toggleBlockContent({{ pt.id }})" style="cursor: pointer;">
                                     <div class="d-flex justify-content-between align-items-center w-100">
                                         <div class="d-flex align-items-center">
                                             <input type="text" class="form-control form-control-sm border-0 bg-transparent fw-bold" 
                                                    name="title_{{ pt.id }}" value="{{ pt.custom_title or pt.title }}" 
-                                                   placeholder="{{ pt.title }}" style="width: auto; min-width: 150px;">
+                                                   placeholder="{{ pt.title }}" style="width: auto; min-width: 150px;" onclick="event.stopPropagation();">
                                             {% set template_count = page_templates | selectattr('template_id', 'equalto', pt.template_id) | list | length %}
                                             {% if template_count > 1 %}
                                                 {% set instance_num = page_templates[:loop.index] | selectattr('template_id', 'equalto', pt.template_id) | list | length %}
@@ -73,24 +73,22 @@
                                             {% endif %}
                                             <span class="badge bg-{{ 'primary' if pt.category == 'system' else 'success' }} ms-2">{{ pt.category.title() }}</span>
                                             {% if pt.category != 'system' %}
-                                            <button type="button" class="btn btn-sm btn-outline-primary ms-2" title="Insert Media" onclick="openMediaPicker('template_{{ pt.id }}')">
+                                            <button type="button" class="btn btn-sm btn-outline-primary ms-2" title="Insert Media" onclick="event.stopPropagation(); openMediaPicker('template_{{ pt.id }}')">
                                                 <i class="bi bi-image"></i>
                                             </button>
                                             {% endif %}
+                                            <i class="bi bi-chevron-down ms-2" id="expand-icon-{{ pt.id }}" style="transition: transform 0.2s ease;"></i>
                                         </div>
                                         <div class="d-flex gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-info" onclick="toggleBlockContent({{ pt.id }})" title="Expand/Collapse">
-                                                <i class="bi bi-chevron-down" id="expand-icon-{{ pt.id }}"></i> <span id="expand-text-{{ pt.id }}">Expand</span>
-                                            </button>
                                             <div class="sort-buttons">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBlock({{ pt.id }}, 'up')">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation(); moveBlock({{ pt.id }}, 'up')">
                                                     <i class="bi bi-chevron-up"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveBlock({{ pt.id }}, 'down')">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation(); moveBlock({{ pt.id }}, 'down')">
                                                     <i class="bi bi-chevron-down"></i>
                                                 </button>
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBlock({{ pt.id }})" title="Remove template block" {% if pt.category == 'system' %}style="visibility: hidden;"{% endif %}>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); removeBlock({{ pt.id }})" title="Remove template block" {% if pt.category == 'system' %}style="visibility: hidden;"{% endif %}>
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -343,18 +341,15 @@ function validateTemplateSelection(form) {
 function toggleBlockContent(blockId) {
     const contentDiv = document.getElementById('content-' + blockId);
     const icon = document.getElementById('expand-icon-' + blockId);
-    const text = document.getElementById('expand-text-' + blockId);
     
     if (contentDiv.classList.contains('show')) {
         // Collapse
         contentDiv.classList.remove('show');
-        icon.className = 'bi bi-chevron-down';
-        text.textContent = 'Expand';
+        icon.style.transform = 'rotate(0deg)';
     } else {
         // Expand
         contentDiv.classList.add('show');
-        icon.className = 'bi bi-chevron-up';
-        text.textContent = 'Collapse';
+        icon.style.transform = 'rotate(180deg)';
         
         // Refresh CodeMirror if it exists for this block
         setTimeout(() => {
