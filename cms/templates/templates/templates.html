@@ -18,6 +18,11 @@
                     <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#importTemplatesModal">
                         <i class="bi bi-upload"></i> Import
                     </button>
+                    <form method="post" action="{{ url_for('templates_.republish_all_pages') }}" class="d-inline" onsubmit="return confirm('This will republish all pages. Are you sure?')">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-arrow-clockwise"></i> Re-publish All Pages
+                        </button>
+                    </form>
                     <a href="{{ url_for('templates_.add_template', tab=active_tab) }}" class="btn btn-primary">
                         <i class="bi bi-plus-circle"></i> Add Template
                     </a>

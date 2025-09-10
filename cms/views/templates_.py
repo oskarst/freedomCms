@@ -480,3 +480,37 @@ def move_template(template_id, direction):
     else:
         flash('Template order updated. Note: existing pages may have different block order.', 'warning')
     return redirect(url_for('templates_.templates'))
+
+@bp.route('/templates/republish-all-pages', methods=['POST'])
+@login_required
+@admin_required
+def republish_all_pages():
+    """Re-publish all pages to update them with latest template changes"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Get all published pages
+    cursor.execute('SELECT id, title, slug FROM pages WHERE published = 1')
+    published_pages = cursor.fetchall()
+    
+    if not published_pages:
+        flash('No published pages found to republish', 'warning')
+        return redirect(url_for('templates_.templates'))
+    
+    republished_count = 0
+    errors = []
+    
+    for page in published_pages:
+        try:
+            # Generate HTML for the page
+            generate_page_html(db, page['id'])
+            republished_count += 1
+        except Exception as e:
+            errors.append(f"Page '{page['title']}': {str(e)}")
+    
+    if errors:
+        flash(f'Republished {republished_count} pages. Errors: {"; ".join(errors)}', 'warning')
+    else:
+        flash(f'Successfully republished {republished_count} pages', 'success')
+    
+    return redirect(url_for('templates_.templates'))
