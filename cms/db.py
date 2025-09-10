@@ -145,6 +145,18 @@ def init_db():
             FOREIGN KEY (template_id) REFERENCES page_template_defs (id) ON DELETE CASCADE
         )
     ''')
+    
+    # Page template parameters for nested blocks
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS page_template_parameters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_template_id INTEGER NOT NULL,
+            parameter_name TEXT NOT NULL,
+            parameter_value TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (page_template_id) REFERENCES page_templates (id) ON DELETE CASCADE
+        )
+    ''')
 
     # Blog categories
     cursor.execute('''

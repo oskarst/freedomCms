@@ -20,9 +20,9 @@ def generate_page_html(page_id, preview=False):
     if not page:
         return "Page not found", 404
 
-    # Get page templates
+    # Get page templates with parameters
     cursor.execute('''
-        SELECT pt.custom_content, pt.use_default, t.content as default_content, t.slug
+        SELECT pt.id, pt.custom_content, pt.use_default, t.content as default_content, t.slug
         FROM page_templates pt
         JOIN page_template_defs t ON pt.template_id = t.id
         WHERE pt.page_id = ?
@@ -34,6 +34,22 @@ def generate_page_html(page_id, preview=False):
     html_content = ''
     for pt in page_templates:
         content = pt['default_content'] if pt['use_default'] else pt['custom_content']
+        
+        # Replace parameters with actual content
+        if content and '{{' in content:
+            # Get parameters for this template
+            cursor.execute('''
+                SELECT parameter_name, parameter_value 
+                FROM page_template_parameters 
+                WHERE page_template_id = ?
+            ''', (pt['id'],))
+            parameters = {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
+            
+            # Replace parameters in content
+            for param_name, param_value in parameters.items():
+                content = content.replace(f'{{{{ {param_name} }}}}', param_value)
+                content = content.replace(f'{{{{{param_name}}}}}', param_value)  # Handle without spaces
+        
         html_content += content
 
     if preview:

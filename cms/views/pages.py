@@ -4,6 +4,7 @@ Pages blueprint for Devall CMS
 """
 
 import json
+import re
 from flask import Blueprint, request, redirect, url_for, render_template, flash, session
 from ..auth import login_required
 from ..db import get_db
@@ -11,6 +12,49 @@ from ..utils import slugify
 from ..services.publisher import generate_page_html
 
 bp = Blueprint('pages', __name__)
+
+def extract_parameters_from_content(content):
+    """Extract parameter names from template content like {{ Content1 }}, {{ Title }}, etc."""
+    if not content:
+        return []
+    
+    # Find all {{ parameter_name }} patterns
+    pattern = r'\{\{\s*([^}]+)\s*\}\}'
+    matches = re.findall(pattern, content)
+    
+    # Remove duplicates and return unique parameter names
+    return list(set(matches))
+
+def has_parameters(content):
+    """Check if content has any parameters"""
+    return len(extract_parameters_from_content(content)) > 0
+
+def get_template_parameters(db, page_template_id):
+    """Get all parameters for a page template"""
+    cursor = db.cursor()
+    cursor.execute('''
+        SELECT parameter_name, parameter_value 
+        FROM page_template_parameters 
+        WHERE page_template_id = ?
+        ORDER BY parameter_name
+    ''', (page_template_id,))
+    return {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
+
+def save_template_parameters(db, page_template_id, parameters):
+    """Save parameters for a page template"""
+    cursor = db.cursor()
+    
+    # Delete existing parameters
+    cursor.execute('DELETE FROM page_template_parameters WHERE page_template_id = ?', (page_template_id,))
+    
+    # Insert new parameters
+    for param_name, param_value in parameters.items():
+        cursor.execute('''
+            INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
+            VALUES (?, ?, ?)
+        ''', (page_template_id, param_name, param_value))
+    
+    db.commit()
 
 @bp.route('/pages')
 @login_required
@@ -333,6 +377,16 @@ def edit_page(page_id):
 
                 cursor.execute('UPDATE page_templates SET title = ?, custom_content = ?, use_default = ?, sort_order = ? WHERE id = ?',
                              (custom_title, custom_content, use_default, sort_order, pt['id']))
+                
+                # Handle nested block parameters
+                if custom_content and has_parameters(custom_content):
+                    parameters = {}
+                    param_names = extract_parameters_from_content(custom_content)
+                    for param_name in param_names:
+                        param_key = f'param_{pt["id"]}_{param_name}'
+                        param_value = request.form.get(param_key, '')
+                        parameters[param_name] = param_value
+                    save_template_parameters(db, pt['id'], parameters)
 
             db.commit()
             flash('Page saved successfully', 'success')
@@ -427,6 +481,19 @@ def edit_page(page_id):
         ORDER BY pt.sort_order
     ''', (page_id,))
     page_templates = cursor.fetchall()
+    
+    # Add parameters to each page template
+    page_templates_with_params = []
+    for pt in page_templates:
+        # Convert Row to dict to allow modifications
+        pt_dict = dict(pt)
+        pt_dict['parameters'] = get_template_parameters(db, pt['id'])
+        content_to_check = pt['custom_content'] or pt['default_content']
+        pt_dict['has_parameters'] = has_parameters(content_to_check)
+        pt_dict['parameter_names'] = extract_parameters_from_content(content_to_check)
+        page_templates_with_params.append(pt_dict)
+    
+    page_templates = page_templates_with_params
 
     # Get all available page templates for the dropdown
     cursor.execute('SELECT id, title, slug, category FROM page_template_defs ORDER BY category, title')

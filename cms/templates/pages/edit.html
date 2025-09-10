@@ -108,6 +108,23 @@
                                             </div>
                                         </div>
                                         <input type="hidden" name="sort_order_{{ pt.id }}" value="{{ pt.sort_order }}">
+                                        
+                                        {% if pt.has_parameters %}
+                                        <!-- Parameter inputs for nested blocks -->
+                                        <div class="mb-3" id="parameters-{{ pt.id }}">
+                                            <h6 class="text-muted mb-2">Block Parameters:</h6>
+                                            {% for param_name in pt.parameter_names %}
+                                            <div class="mb-2">
+                                                <label class="form-label small">{{ param_name }}:</label>
+                                                <textarea class="form-control form-control-sm" 
+                                                          name="param_{{ pt.id }}_{{ param_name }}" 
+                                                          rows="3" 
+                                                          placeholder="Enter content for {{ param_name }}">{{ pt.parameters.get(param_name, '') }}</textarea>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        
                                         <textarea class="form-control code-html {{ 'grayed-textarea' if pt.use_default else '' }}"
                                                   id="template_{{ pt.id }}" name="template_{{ pt.id }}"
                                                   rows="8" {{ 'readonly' if pt.use_default else '' }}>{{ pt.custom_content if not pt.use_default else pt.default_content }}</textarea>
