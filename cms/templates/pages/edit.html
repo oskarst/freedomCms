@@ -9,6 +9,20 @@
         <input type="hidden" name="template_id" id="selectedTemplateId">
     </form>
 
+    <!-- Mode Toggle Button (Outside main form) -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <form method="post" style="display: inline;">
+                <input type="hidden" name="action" value="toggle_mode">
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-{% if page.mode == 'simple' %}gear{% else %}eye{% endif %}"></i> 
+                    {% if page.mode == 'simple' %}Show Advanced Mode{% else %}Show Simple Mode{% endif %}
+                </button>
+            </form>
+            <small class="text-muted ms-2">Current mode: {{ page.mode.title() }}</small>
+        </div>
+    </div>
+
     <form method="post" id="pageForm">
         <input type="hidden" name="action" value="save">
 
@@ -39,6 +53,7 @@
             </div>
         </div>
 
+        {% if page.mode == 'advanced' %}
         <div class="row">
             <div class="col-12">
                 <div class="card">
@@ -139,6 +154,43 @@
                 </div>
             </div>
         </div>
+        {% else %}
+        <!-- Simple Mode: Show only parameters -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Page Content</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for pt in page_templates %}
+                            {% if pt.has_parameters %}
+                            <div class="mb-4">
+                                <h6 class="text-primary mb-3">{{ pt.title or 'Untitled Block' }}</h6>
+                                {% for param_name in pt.parameter_names %}
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">{{ param_name }}:</label>
+                                    <textarea class="form-control" 
+                                              name="param_{{ pt.id }}_{{ param_name }}" 
+                                              rows="4" 
+                                              placeholder="Enter content for {{ param_name }}">{{ pt.parameters.get(param_name, '') }}</textarea>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                        {% if not page_templates or not page_templates|selectattr('has_parameters')|list %}
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-info-circle fs-1"></i>
+                            <p class="mt-3">No content blocks with parameters found.</p>
+                            <p>Switch to Advanced Mode to add template blocks.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </form>
 </div>
 {% endblock %}

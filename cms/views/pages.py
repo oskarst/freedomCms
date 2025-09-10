@@ -99,7 +99,7 @@ def export_pages():
     # Get all pages with their templates
     cursor.execute('''
         SELECT
-            p.id, p.title, p.slug, p.published, p.created_at, p.updated_at,
+            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
             t.title as template_title, t.slug as template_slug, t.default_parameters
         FROM pages p
@@ -121,6 +121,7 @@ def export_pages():
                 'title': row['title'],
                 'slug': row['slug'],
                 'published': row['published'],
+                'mode': row.get('mode', 'simple'),
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
                 'templates': []
@@ -181,7 +182,7 @@ def export_selected_pages():
     placeholders = ','.join('?' * len(page_ids))
     cursor.execute(f'''
         SELECT
-            p.id, p.title, p.slug, p.published, p.created_at, p.updated_at,
+            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
             t.title as template_title, t.slug as template_slug, t.default_parameters
         FROM pages p
@@ -204,6 +205,7 @@ def export_selected_pages():
                 'title': row['title'],
                 'slug': row['slug'],
                 'published': row['published'],
+                'mode': row.get('mode', 'simple'),
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
                 'templates': []
@@ -274,12 +276,13 @@ def import_pages(import_data, overwrite_existing, cursor):
 
             # Insert new page
             cursor.execute('''
-                INSERT INTO pages (title, slug, published, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO pages (title, slug, published, mode, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
             ''', (
                 page_data['title'],
                 page_data['slug'],
                 page_data.get('published', 0),
+                page_data.get('mode', 'simple'),
                 page_data.get('created_at', '2024-01-01T00:00:00'),
                 page_data.get('updated_at', '2024-01-01T00:00:00')
             ))
@@ -363,7 +366,7 @@ def add_page():
             return redirect(url_for('pages.add_page'))
 
         # Insert new page
-        cursor.execute('INSERT INTO pages (title, slug) VALUES (?, ?)', (title, slug_input))
+        cursor.execute('INSERT INTO pages (title, slug, mode) VALUES (?, ?, ?)', (title, slug_input, 'simple'))
         page_id = cursor.lastrowid
 
         # Get all default PAGE templates and create page templates
@@ -405,7 +408,16 @@ def edit_page(page_id):
     if request.method == 'POST':
         action = request.form.get('action')
 
-        if action == 'save':
+        if action == 'toggle_mode':
+            # Toggle between simple and advanced mode
+            current_mode = page['mode'] if 'mode' in page.keys() else 'simple'
+            new_mode = 'advanced' if current_mode == 'simple' else 'simple'
+            cursor.execute('UPDATE pages SET mode = ? WHERE id = ?', (new_mode, page_id))
+            db.commit()
+            flash(f'Switched to {new_mode.title()} mode', 'success')
+            return redirect(url_for('pages.edit_page', page_id=page_id))
+
+        elif action == 'save':
             # Update page templates
             cursor.execute('SELECT pt.id, pt.template_id, pt.use_default, pt.sort_order FROM page_templates pt WHERE pt.page_id = ? ORDER BY pt.sort_order', (page_id,))
             existing_templates = cursor.fetchall()
@@ -418,13 +430,37 @@ def edit_page(page_id):
                 custom_title = request.form.get(title_key, '')
                 sort_order = request.form.get(f'sort_order_{pt["id"]}', 0)
 
-                cursor.execute('UPDATE page_templates SET title = ?, custom_content = ?, use_default = ?, sort_order = ? WHERE id = ?',
-                             (custom_title, custom_content, use_default, sort_order, pt['id']))
+                # In Simple mode, preserve existing content and only update parameters
+                current_page_mode = page['mode'] if 'mode' in page.keys() else 'simple'
+                if current_page_mode == 'simple':
+                    # Get current template content to preserve it
+                    cursor.execute('SELECT custom_content, use_default FROM page_templates WHERE id = ?', (pt['id'],))
+                    current_template = cursor.fetchone()
+                    if current_template:
+                        custom_content = current_template['custom_content'] or ''
+                        use_default = current_template['use_default']
+                    
+                    # Only update title and sort_order, preserve content
+                    cursor.execute('UPDATE page_templates SET title = ?, sort_order = ? WHERE id = ?',
+                                 (custom_title, sort_order, pt['id']))
+                else:
+                    # Advanced mode: update everything
+                    cursor.execute('UPDATE page_templates SET title = ?, custom_content = ?, use_default = ?, sort_order = ? WHERE id = ?',
+                                 (custom_title, custom_content, use_default, sort_order, pt['id']))
                 
-                # Handle nested block parameters
-                if custom_content and has_parameters(custom_content):
+                # Handle nested block parameters (works in both modes)
+                # Get the content that has parameters (either custom or default)
+                content_to_check = custom_content if custom_content else ''
+                if not content_to_check:
+                    # Get default content from template definition
+                    cursor.execute('SELECT content FROM page_template_defs WHERE id = ?', (pt['template_id'],))
+                    template_def = cursor.fetchone()
+                    if template_def:
+                        content_to_check = template_def['content'] or ''
+                
+                if content_to_check and has_parameters(content_to_check):
                     parameters = {}
-                    param_names = extract_parameters_from_content(custom_content)
+                    param_names = extract_parameters_from_content(content_to_check)
                     for param_name in param_names:
                         param_key = f'param_{pt["id"]}_{param_name}'
                         param_value = request.form.get(param_key, '')

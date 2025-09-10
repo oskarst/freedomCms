@@ -127,6 +127,7 @@ def init_db():
             title TEXT NOT NULL,
             slug TEXT UNIQUE NOT NULL,
             published BOOLEAN DEFAULT 0,
+            mode TEXT DEFAULT 'simple',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
