@@ -136,12 +136,13 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             page_id INTEGER NOT NULL,
             template_id INTEGER NOT NULL,
+            title TEXT,
             custom_content TEXT,
             use_default BOOLEAN DEFAULT 1,
             sort_order INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (page_id) REFERENCES pages (id) ON DELETE CASCADE,
-            FOREIGN KEY (template_id) REFERENCES templates (id) ON DELETE CASCADE
+            FOREIGN KEY (template_id) REFERENCES page_template_defs (id) ON DELETE CASCADE
         )
     ''')
 
@@ -198,7 +199,7 @@ def init_db():
             sort_order INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (post_id) REFERENCES blog_posts (id) ON DELETE CASCADE,
-            FOREIGN KEY (template_id) REFERENCES templates (id) ON DELETE CASCADE
+            FOREIGN KEY (template_id) REFERENCES blog_template_defs (id) ON DELETE CASCADE
         )
     ''')
 
