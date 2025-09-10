@@ -101,7 +101,8 @@ def init_db():
             is_default BOOLEAN DEFAULT 1,
             sort_order INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            default_parameters TEXT DEFAULT '{}'
         )
     ''')
     cursor.execute('''
@@ -114,7 +115,8 @@ def init_db():
             is_default BOOLEAN DEFAULT 1,
             sort_order INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            default_parameters TEXT DEFAULT '{}'
         )
     ''')
 
@@ -358,8 +360,8 @@ def init_db():
         ('Body Close', 'body_close', 'system', '</body>\n</html>', 1, 9),
     ]
     for title, slug, category, content, is_default, sort_order in default_templates:
-        cursor.execute('INSERT OR IGNORE INTO page_template_defs (title, slug, category, content, is_default, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-                     (title, slug, category, content, is_default, sort_order))
+        cursor.execute('INSERT OR IGNORE INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                     (title, slug, category, content, is_default, sort_order, '{}'))
 
     # Insert default blog templates
     blog_templates = [
@@ -373,8 +375,8 @@ def init_db():
         ('Blog Body Close', 'body_close', 'system', '</body>\n</html>', 1, 8),
     ]
     for title, slug, category, content, is_default, sort_order in blog_templates:
-        cursor.execute('INSERT OR IGNORE INTO blog_template_defs (title, slug, category, content, is_default, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-                     (title, slug, category, content, is_default, sort_order))
+        cursor.execute('INSERT OR IGNORE INTO blog_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                     (title, slug, category, content, is_default, sort_order, '{}'))
 
 
     # Migration: move existing templates rows into split tables and update junctions
@@ -392,15 +394,15 @@ def init_db():
         sort_order = row['sort_order']
         if slug.startswith('blog_'):
             new_slug = slug[5:] or slug
-            cursor.execute('INSERT OR IGNORE INTO blog_template_defs (title, slug, category, content, is_default, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-                           (title, new_slug, category, content, is_default, sort_order))
+            cursor.execute('INSERT OR IGNORE INTO blog_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                           (title, new_slug, category, content, is_default, sort_order, '{}'))
             cursor.execute('SELECT id FROM blog_template_defs WHERE slug = ?', (new_slug,))
             new_id = cursor.fetchone()['id']
             old_to_new_blog[tid] = new_id
         else:
             new_slug = slug
-            cursor.execute('INSERT OR IGNORE INTO page_template_defs (title, slug, category, content, is_default, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-                           (title, new_slug, category, content, is_default, sort_order))
+            cursor.execute('INSERT OR IGNORE INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                           (title, new_slug, category, content, is_default, sort_order, '{}'))
             cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (new_slug,))
             new_id = cursor.fetchone()['id']
             old_to_new_page[tid] = new_id

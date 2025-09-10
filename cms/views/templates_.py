@@ -73,7 +73,7 @@ def export_templates():
     cursor = db.cursor()
     tab = request.args.get('tab', 'page')
     table = 'page_template_defs' if tab == 'page' else 'blog_template_defs'
-    cursor.execute(f'SELECT id, title, slug, category, content, is_default, sort_order, created_at, updated_at FROM {table} ORDER BY sort_order')
+    cursor.execute(f'SELECT id, title, slug, category, content, is_default, sort_order, created_at, updated_at, default_parameters FROM {table} ORDER BY sort_order')
     rows = cursor.fetchall()
 
     export_data = [
@@ -86,7 +86,8 @@ def export_templates():
             'is_default': row['is_default'],
             'sort_order': row['sort_order'],
             'created_at': row['created_at'],
-            'updated_at': row['updated_at']
+            'updated_at': row['updated_at'],
+            'default_parameters': row['default_parameters'] or '{}'
         }
         for row in rows
     ]
@@ -113,7 +114,7 @@ def export_selected_templates():
     cursor = get_db().cursor()
     ids = [int(tid) for tid in selected_ids]
     placeholders = ','.join('?' * len(ids))
-    cursor.execute(f'SELECT id, title, slug, category, content, is_default, sort_order, created_at, updated_at FROM {table} WHERE id IN ({placeholders}) ORDER BY sort_order', ids)
+    cursor.execute(f'SELECT id, title, slug, category, content, is_default, sort_order, created_at, updated_at, default_parameters FROM {table} WHERE id IN ({placeholders}) ORDER BY sort_order', ids)
     rows = cursor.fetchall()
 
     export_data = [
@@ -126,7 +127,8 @@ def export_selected_templates():
             'is_default': row['is_default'],
             'sort_order': row['sort_order'],
             'created_at': row['created_at'],
-            'updated_at': row['updated_at']
+            'updated_at': row['updated_at'],
+            'default_parameters': row['default_parameters'] or '{}'
         }
         for row in rows
     ]
@@ -176,15 +178,16 @@ def import_templates(import_data, overwrite_existing, cursor):
 
             # Insert template
             cursor.execute(f'''
-                INSERT INTO {table} (title, slug, category, content, is_default, sort_order)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO {table} (title, slug, category, content, is_default, sort_order, default_parameters)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 t.get('title') or slug,
                 slug,
                 t.get('category', 'content'),
                 t.get('content', ''),
                 t.get('is_default', 1),
-                sort_order
+                sort_order,
+                t.get('default_parameters', '{}')
             ))
 
             new_template_id = cursor.lastrowid
@@ -223,6 +226,7 @@ def add_template():
         content = request.form.get('content', '').strip()
         slug_input = request.form.get('slug', '').strip()
         is_default = request.form.get('is_default') == 'on'
+        default_parameters = request.form.get('default_parameters', '{}').strip()
         ttype = request.form.get('template_type', request.args.get('tab', 'page'))
         table = 'page_template_defs' if ttype == 'page' else 'blog_template_defs'
 
@@ -249,9 +253,9 @@ def add_template():
 
         # Create template
         cursor.execute(f'''
-            INSERT INTO {table} (title, slug, category, content, is_default, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (title, slug_input, category, content, is_default, max_order + 1))
+            INSERT INTO {table} (title, slug, category, content, is_default, sort_order, default_parameters)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (title, slug_input, category, content, is_default, max_order + 1, default_parameters))
 
         if is_default:
             template_id = cursor.lastrowid
@@ -312,6 +316,7 @@ def edit_template(template_id):
         content = request.form.get('content', '').strip()
         slug_input = request.form.get('slug', '').strip()
         is_default = request.form.get('is_default') == 'on'
+        default_parameters = request.form.get('default_parameters', '{}').strip()
 
         if not title or not content:
             flash('Title and content are required', 'error')
@@ -326,9 +331,9 @@ def edit_template(template_id):
         # Update template
         cursor.execute(f'''
             UPDATE {table}
-            SET title = ?, slug = ?, category = ?, content = ?, is_default = ?, updated_at = CURRENT_TIMESTAMP
+            SET title = ?, slug = ?, category = ?, content = ?, is_default = ?, default_parameters = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        ''', (title, slug_input or slugify(title), category, content, is_default, template_id))
+        ''', (title, slug_input or slugify(title), category, content, is_default, default_parameters, template_id))
 
         # Handle default status change
         if is_default and not template['is_default']:

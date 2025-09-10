@@ -101,7 +101,7 @@ def export_pages():
         SELECT
             p.id, p.title, p.slug, p.published, p.created_at, p.updated_at,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
-            t.title as template_title, t.slug as template_slug
+            t.title as template_title, t.slug as template_slug, t.default_parameters
         FROM pages p
         LEFT JOIN page_templates pt ON p.id = pt.page_id
         LEFT JOIN page_template_defs t ON pt.template_id = t.id
@@ -144,7 +144,8 @@ def export_pages():
                 'custom_content': row['custom_content'] or '',
                 'use_default': row['use_default'],
                 'sort_order': row['sort_order'],
-                'parameters': parameters
+                'parameters': parameters,
+                'default_parameters': row['default_parameters'] or '{}'
             })
 
     # Convert to list
@@ -182,7 +183,7 @@ def export_selected_pages():
         SELECT
             p.id, p.title, p.slug, p.published, p.created_at, p.updated_at,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
-            t.title as template_title, t.slug as template_slug
+            t.title as template_title, t.slug as template_slug, t.default_parameters
         FROM pages p
         LEFT JOIN page_templates pt ON p.id = pt.page_id
         LEFT JOIN page_template_defs t ON pt.template_id = t.id
@@ -226,7 +227,8 @@ def export_selected_pages():
                 'custom_content': row['custom_content'] or '',
                 'use_default': row['use_default'],
                 'sort_order': row['sort_order'],
-                'parameters': parameters
+                'parameters': parameters,
+                'default_parameters': row['default_parameters'] or '{}'
             })
 
     # Convert to list
@@ -444,10 +446,11 @@ def edit_page(page_id):
             template_id = request.form.get('template_id')
             
             if template_id:
-                # Get template info for default title
-                cursor.execute('SELECT title FROM page_template_defs WHERE id = ?', (template_id,))
+                # Get template info for default title and parameters
+                cursor.execute('SELECT title, default_parameters FROM page_template_defs WHERE id = ?', (template_id,))
                 template_info = cursor.fetchone()
                 default_title = template_info['title'] if template_info else 'Untitled Block'
+                default_parameters_json = template_info['default_parameters'] if template_info else '{}'
                 
                 # Get next sort order
                 cursor.execute('SELECT COALESCE(MAX(sort_order), 0) as maxo FROM page_templates WHERE page_id = ?', (page_id,))
@@ -459,6 +462,24 @@ def edit_page(page_id):
                     INSERT INTO page_templates (page_id, template_id, title, use_default, sort_order)
                     VALUES (?, ?, ?, 1, ?)
                 ''', (page_id, template_id, default_title, next_order))
+                
+                # Get the new page template ID
+                page_template_id = cursor.lastrowid
+                
+                # Create default parameters if they exist
+                try:
+                    import json
+                    default_parameters = json.loads(default_parameters_json)
+                    if default_parameters:
+                        for param_name, param_value in default_parameters.items():
+                            cursor.execute('''
+                                INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
+                                VALUES (?, ?, ?)
+                            ''', (page_template_id, param_name, param_value))
+                except (json.JSONDecodeError, TypeError):
+                    # Invalid JSON or empty parameters, skip
+                    pass
+                
                 db.commit()
                 flash('Template block added successfully', 'success')
             else:
