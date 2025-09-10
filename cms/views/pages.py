@@ -433,30 +433,39 @@ def edit_page(page_id):
                 # In Simple mode, preserve existing content and only update parameters
                 current_page_mode = page['mode'] if 'mode' in page.keys() else 'simple'
                 if current_page_mode == 'simple':
-                    # Get current template content to preserve it
-                    cursor.execute('SELECT custom_content, use_default FROM page_templates WHERE id = ?', (pt['id'],))
-                    current_template = cursor.fetchone()
-                    if current_template:
-                        custom_content = current_template['custom_content'] or ''
-                        use_default = current_template['use_default']
-                    
-                    # Only update title and sort_order, preserve content
-                    cursor.execute('UPDATE page_templates SET title = ?, sort_order = ? WHERE id = ?',
-                                 (custom_title, sort_order, pt['id']))
+                    # In Simple mode, don't update the page_templates table at all
+                    # Only update parameters (handled below)
+                    pass
                 else:
                     # Advanced mode: update everything
                     cursor.execute('UPDATE page_templates SET title = ?, custom_content = ?, use_default = ?, sort_order = ? WHERE id = ?',
                                  (custom_title, custom_content, use_default, sort_order, pt['id']))
                 
                 # Handle nested block parameters (works in both modes)
-                # Get the content that has parameters (either custom or default)
-                content_to_check = custom_content if custom_content else ''
-                if not content_to_check:
-                    # Get default content from template definition
-                    cursor.execute('SELECT content FROM page_template_defs WHERE id = ?', (pt['template_id'],))
-                    template_def = cursor.fetchone()
-                    if template_def:
-                        content_to_check = template_def['content'] or ''
+                if current_page_mode == 'simple':
+                    # In Simple mode, get current template content to check for parameters
+                    cursor.execute('SELECT custom_content, use_default FROM page_templates WHERE id = ?', (pt['id'],))
+                    current_template = cursor.fetchone()
+                    if current_template:
+                        if current_template['use_default']:
+                            # Use default content from template definition
+                            cursor.execute('SELECT content FROM page_template_defs WHERE id = ?', (pt['template_id'],))
+                            template_def = cursor.fetchone()
+                            content_to_check = template_def['content'] if template_def else ''
+                        else:
+                            # Use custom content
+                            content_to_check = current_template['custom_content'] or ''
+                    else:
+                        content_to_check = ''
+                else:
+                    # Advanced mode: use form data
+                    content_to_check = custom_content if custom_content else ''
+                    if not content_to_check:
+                        # Get default content from template definition
+                        cursor.execute('SELECT content FROM page_template_defs WHERE id = ?', (pt['template_id'],))
+                        template_def = cursor.fetchone()
+                        if template_def:
+                            content_to_check = template_def['content'] or ''
                 
                 if content_to_check and has_parameters(content_to_check):
                     parameters = {}
