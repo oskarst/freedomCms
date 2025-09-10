@@ -33,22 +33,37 @@ def generate_page_html(page_id, preview=False):
     # Build HTML content
     html_content = ''
     for pt in page_templates:
-        content = pt['default_content'] if pt['use_default'] else pt['custom_content']
+        # For blocks with parameters, always use the template content (either default or custom)
+        # and replace parameters with saved values
+        if pt['use_default']:
+            content = pt['default_content']
+        else:
+            content = pt['custom_content']
+        
+        # Check if this template has parameters and replace them
+        cursor.execute('''
+            SELECT parameter_name, parameter_value 
+            FROM page_template_parameters 
+            WHERE page_template_id = ?
+        ''', (pt['id'],))
+        parameters = {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
+        
+        # If we have parameters, we need to use the template content that has the parameter placeholders
+        if parameters:
+            # Use custom_content if it has parameters, otherwise use default_content
+            if pt['custom_content'] and '{{' in pt['custom_content']:
+                content = pt['custom_content']
+            elif pt['default_content'] and '{{' in pt['default_content']:
+                content = pt['default_content']
         
         # Replace parameters with actual content
-        if content and '{{' in content:
-            # Get parameters for this template
-            cursor.execute('''
-                SELECT parameter_name, parameter_value 
-                FROM page_template_parameters 
-                WHERE page_template_id = ?
-            ''', (pt['id'],))
-            parameters = {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
-            
-            # Replace parameters in content
+        if content and '{{' in content and parameters:
             for param_name, param_value in parameters.items():
+                # Handle various parameter formats
                 content = content.replace(f'{{{{ {param_name} }}}}', param_value)
                 content = content.replace(f'{{{{{param_name}}}}}', param_value)  # Handle without spaces
+                content = content.replace(f'{{{{ {param_name.strip()} }}}}', param_value)  # Handle with extra spaces
+                content = content.replace(f'{{{{{param_name.strip()}}}}}', param_value)  # Handle without spaces and extra spaces
         
         html_content += content
 
