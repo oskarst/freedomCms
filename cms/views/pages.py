@@ -374,15 +374,33 @@ def add_page():
         default_templates = cursor.fetchall()
 
         for template in default_templates:
-            # Get template title
-            cursor.execute('SELECT title FROM page_template_defs WHERE id = ?', (template['id'],))
+            # Get template title and default parameters
+            cursor.execute('SELECT title, default_parameters FROM page_template_defs WHERE id = ?', (template['id'],))
             template_info = cursor.fetchone()
             default_title = template_info['title'] if template_info else 'Untitled Block'
+            default_parameters_json = template_info['default_parameters'] if template_info else '{}'
             
             cursor.execute('''
                 INSERT INTO page_templates (page_id, template_id, title, sort_order)
                 VALUES (?, ?, ?, ?)
             ''', (page_id, template['id'], default_title, template['sort_order']))
+            
+            # Get the new page template ID
+            page_template_id = cursor.lastrowid
+            
+            # Create default parameters if they exist
+            try:
+                import json
+                default_parameters = json.loads(default_parameters_json)
+                if default_parameters:
+                    for param_name, param_value in default_parameters.items():
+                        cursor.execute('''
+                            INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
+                            VALUES (?, ?, ?)
+                        ''', (page_template_id, param_name, param_value))
+            except (json.JSONDecodeError, TypeError):
+                # Invalid JSON or empty parameters, skip
+                pass
 
         db.commit()
         flash('Page created successfully', 'success')
