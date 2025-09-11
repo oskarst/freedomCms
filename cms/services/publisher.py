@@ -49,7 +49,8 @@ def generate_page_html(page_id, preview=False):
         parameters = {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
         
         # If we have parameters, we need to use the template content that has the parameter placeholders
-        if parameters:
+        # But only if the current content doesn't have parameters
+        if parameters and content and '{{' not in content:
             # Use custom_content if it has parameters, otherwise use default_content
             if pt['custom_content'] and '{{' in pt['custom_content']:
                 content = pt['custom_content']
