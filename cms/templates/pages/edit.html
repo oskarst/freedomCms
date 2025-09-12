@@ -29,13 +29,13 @@
         </div>
     </div>
 
-    <form method="post" id="pageForm">
+    <form method="post" id="pageForm" onsubmit="return validatePageForm()">
         <input type="hidden" name="action" value="save">
 
         <div class="row">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1>Edit Page: {{ page.title }}</h1>
+                    <h1>Edit Page</h1>
                     <div class="d-flex gap-2">
                         <a href="{{ url_for('pages.pages') }}" class="btn btn-outline-secondary rounded-pill">
                             <i class="bi bi-arrow-left"></i> Back to Pages
@@ -54,6 +54,37 @@
                                 onclick="return confirm('Are you sure you want to delete this page?')">
                             <i class="bi bi-trash"></i> Delete
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page Title and Slug Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Page Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="page_title" class="form-label fw-bold">Page Title</label>
+                                    <input type="text" class="form-control" id="page_title" name="page_title" 
+                                           value="{{ page.title }}" required oninput="generateSlug()">
+                                    <div class="form-text">The display title for this page</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="page_slug" class="form-label fw-bold">Page Slug</label>
+                                    <input type="text" class="form-control" id="page_slug" name="page_slug" 
+                                           value="{{ page.slug }}" required>
+                                    <div class="form-text">URL-friendly version of the title (e.g., "my-page")</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -583,6 +614,79 @@ function toggleBlockContent(blockId) {
             }
         }, 100);
     }
+}
+
+// Generate slug from title
+function generateSlug() {
+    const titleInput = document.getElementById('page_title');
+    const slugInput = document.getElementById('page_slug');
+    
+    if (titleInput && slugInput) {
+        // Only auto-generate if slug is empty or matches the previous title
+        const currentTitle = titleInput.value;
+        const currentSlug = slugInput.value;
+        
+        // Simple slug generation (convert to lowercase, replace spaces with hyphens, remove special chars)
+        const generatedSlug = currentTitle
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+            .replace(/\s+/g, '-') // Replace spaces with hyphens
+            .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+            .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+        
+        // Only update if slug is empty or if it looks like it was auto-generated
+        if (!currentSlug || currentSlug === slugifyPreviousTitle) {
+            slugInput.value = generatedSlug;
+        }
+        
+        // Store the current title for next comparison
+        slugifyPreviousTitle = currentTitle;
+    }
+}
+
+// Store previous title for slug generation comparison
+let slugifyPreviousTitle = '';
+
+// Validate page form before submission
+function validatePageForm() {
+    const titleInput = document.getElementById('page_title');
+    const slugInput = document.getElementById('page_slug');
+    
+    if (!titleInput || !slugInput) {
+        return true; // Let server handle validation if elements not found
+    }
+    
+    const title = titleInput.value.trim();
+    const slug = slugInput.value.trim();
+    
+    if (!title) {
+        alert('Page title is required');
+        titleInput.focus();
+        return false;
+    }
+    
+    if (!slug) {
+        alert('Page slug is required');
+        slugInput.focus();
+        return false;
+    }
+    
+    // Validate slug format (only lowercase letters, numbers, and hyphens)
+    const slugPattern = /^[a-z0-9-]+$/;
+    if (!slugPattern.test(slug)) {
+        alert('Page slug can only contain lowercase letters, numbers, and hyphens');
+        slugInput.focus();
+        return false;
+    }
+    
+    // Check for consecutive hyphens or leading/trailing hyphens
+    if (slug.includes('--') || slug.startsWith('-') || slug.endsWith('-')) {
+        alert('Page slug cannot have consecutive hyphens or start/end with hyphens');
+        slugInput.focus();
+        return false;
+    }
+    
+    return true;
 }
 </script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">

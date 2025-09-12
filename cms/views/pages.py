@@ -460,6 +460,28 @@ def edit_page(page_id):
             return redirect(url_for('pages.edit_page', page_id=page_id))
 
         elif action == 'save':
+            # Update page title and slug
+            page_title = request.form.get('page_title', '').strip()
+            page_slug = request.form.get('page_slug', '').strip()
+            
+            if not page_title:
+                flash('Page title is required', 'error')
+                return redirect(url_for('pages.edit_page', page_id=page_id))
+            
+            if not page_slug:
+                flash('Page slug is required', 'error')
+                return redirect(url_for('pages.edit_page', page_id=page_id))
+            
+            # Check if slug already exists (excluding current page)
+            cursor.execute('SELECT id FROM pages WHERE slug = ? AND id != ?', (page_slug, page_id))
+            if cursor.fetchone():
+                flash('Page with this slug already exists', 'error')
+                return redirect(url_for('pages.edit_page', page_id=page_id))
+            
+            # Update page title and slug
+            cursor.execute('UPDATE pages SET title = ?, slug = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+                         (page_title, page_slug, page_id))
+            
             # Update page templates
             cursor.execute('SELECT pt.id, pt.template_id, pt.use_default, pt.sort_order FROM page_templates pt WHERE pt.page_id = ? ORDER BY pt.sort_order', (page_id,))
             existing_templates = cursor.fetchall()
