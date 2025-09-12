@@ -13,6 +13,24 @@ from ..services.publisher import generate_page_html
 
 bp = Blueprint('pages', __name__)
 
+def cleanup_old_previews(page_id, current_filename=None):
+    """Clean up old preview files for a page"""
+    import os
+    import glob
+    from ..db import PUB_DIR
+    
+    # Remove old preview files for this page, but not the current one
+    pattern = os.path.join(PUB_DIR, f'preview_{page_id}_*.html')
+    old_files = glob.glob(pattern)
+    for file_path in old_files:
+        # Don't delete the current file
+        if current_filename and os.path.basename(file_path) == current_filename:
+            continue
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass  # File might already be deleted
+
 def extract_parameters_from_content(content):
     """Extract parameter names from template content like {{ Content1 }}, {{ Title }}, etc."""
     if not content:
@@ -662,14 +680,35 @@ def delete_page(page_id):
 @bp.route('/pages/<int:page_id>/preview')
 @login_required
 def preview_page(page_id):
-    """Preview page"""
+    """Preview page with proper CSS and JS support"""
+    # Generate preview HTML and save it temporarily
     html_content = generate_page_html(page_id, preview=True)
     if isinstance(html_content, tuple):  # Error case
         flash(html_content[0], 'error')
         return redirect(url_for('pages.pages'))
 
-    from flask import Response
-    return Response(html_content, mimetype='text/html')
+    # Save preview to a temporary file in pub directory
+    import tempfile
+    import os
+    from ..db import PUB_DIR
+    
+    # Create a temporary preview file
+    preview_filename = f'preview_{page_id}_{session.get("csrf_token", "temp")}.html'
+    preview_path = os.path.join(PUB_DIR, preview_filename)
+    
+    try:
+        with open(preview_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+    except Exception as e:
+        flash(f'Error creating preview: {str(e)}', 'error')
+        return redirect(url_for('pages.pages'))
+    
+    # Clean up old preview files for this user
+    cleanup_old_previews(page_id, preview_filename)
+    
+    # Redirect to the preview file served from pub directory
+    from flask import redirect, url_for
+    return redirect(f'/pub/{preview_filename}')
 
 @bp.route('/pages/<int:page_id>/publish', methods=['POST'])
 @login_required
