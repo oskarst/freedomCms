@@ -230,9 +230,31 @@ def init_db():
             small_path TEXT,
             medium_path TEXT,
             large_path TEXT,
+            original_webp_path TEXT,
+            small_webp_path TEXT,
+            medium_webp_path TEXT,
+            large_webp_path TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    # Add WebP columns to media table if they don't exist
+    try:
+        cursor.execute('ALTER TABLE media ADD COLUMN original_webp_path TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    try:
+        cursor.execute('ALTER TABLE media ADD COLUMN small_webp_path TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    try:
+        cursor.execute('ALTER TABLE media ADD COLUMN medium_webp_path TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    try:
+        cursor.execute('ALTER TABLE media ADD COLUMN large_webp_path TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
 
     # Insert default admin user if not exists
     cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))

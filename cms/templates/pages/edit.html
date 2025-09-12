@@ -217,6 +217,39 @@
     max-height: 1000px;
 }
 
+/* Media Picker Styles */
+.media-picker-card { 
+    overflow: hidden; 
+    min-height: 200px;
+    height: 100%;
+}
+
+.media-picker-card .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+    opacity: 0; transition: opacity .15s ease-in-out; color: #fff;
+    display: flex; align-items: flex-start; justify-content: center;
+    overflow-y: auto;
+    padding: 0.5rem;
+    pointer-events: none;
+}
+.media-picker-card:hover .overlay { opacity: 1; }
+.media-picker-card .btn { white-space: nowrap; pointer-events: auto; }
+
+.media-picker-card .url-container {
+    width: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    justify-content: flex-start;
+}
+
+.media-picker-card .url-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
 .template-block-header {
     border-bottom: 1px solid #dee2e6;
     padding: 0.75rem 1rem;
@@ -314,6 +347,80 @@ function toggleDefaultContent(checkbox, textareaId) {
     </div>
   </div>
  </div>
+
+<!-- Image Size Modal -->
+<div class="modal" tabindex="-1" id="imageSizeModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Choose Image Size</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Original Format URLs:</h6>
+            <div class="mb-3">
+              <label class="form-label">Small:</label>
+              <input type="text" class="form-control" id="size-modal-small" readonly onclick="this.select()">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Medium:</label>
+              <input type="text" class="form-control" id="size-modal-medium" readonly onclick="this.select()">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Large:</label>
+              <input type="text" class="form-control" id="size-modal-large" readonly onclick="this.select()">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Original:</label>
+              <input type="text" class="form-control" id="size-modal-orig" readonly onclick="this.select()">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h6>WebP Format URLs:</h6>
+            <div class="mb-3">
+              <label class="form-label">Small WebP:</label>
+              <input type="text" class="form-control" id="size-modal-small-webp" readonly onclick="this.select()">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Medium WebP:</label>
+              <input type="text" class="form-control" id="size-modal-medium-webp" readonly onclick="this.select()">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Large WebP:</label>
+              <input type="text" class="form-control" id="size-modal-large-webp" readonly onclick="this.select()">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Original WebP:</label>
+              <input type="text" class="form-control" id="size-modal-orig-webp" readonly onclick="this.select()">
+            </div>
+          </div>
+        </div>
+        <div class="row mt-4">
+          <div class="col-12">
+            <h6>Pre-written Picture Tags:</h6>
+            <div class="mb-3">
+              <label class="form-label">Small Size:</label>
+              <textarea class="form-control" id="size-modal-picture-small" rows="3" readonly onclick="this.select()"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Medium Size:</label>
+              <textarea class="form-control" id="size-modal-picture-medium" rows="3" readonly onclick="this.select()"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Large Size:</label>
+              <textarea class="form-control" id="size-modal-picture-large" rows="3" readonly onclick="this.select()"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
 let activeEditor = null;
 function openMediaPicker(targetTextareaId) {
@@ -326,28 +433,24 @@ function openMediaPicker(targetTextareaId) {
     fetch('{{ url_for('media.media_list_json') }}').then(r => r.json()).then(data => {
         const grid = document.getElementById('mediaPickerGrid');
         grid.innerHTML = '';
+        
+        // Store media data for image size modal
+        mediaData = {};
         (data.media || []).forEach(item => {
+            mediaData[item.id] = item;
             const col = document.createElement('div');
             col.className = 'col-6 col-md-3 mb-3';
-            col.innerHTML = `<div class="card h-100">
-                <img src="${item.small || item.original}" class="card-img-top" alt="${item.alt}">
+            col.innerHTML = `<div class="card h-100 position-relative media-picker-card">
+                <img src="${item.small || item.original}" class="card-img-top" alt="${item.alt}" 
+                     style="cursor: pointer; height: 150px; object-fit: cover;" 
+                     onclick="openImageSizeModal(${item.id})">
                 <div class="card-body p-2">
-                  <div class="d-grid gap-1">
-                    <div>
-                      <label class="form-label small mb-1">Small URL:</label>
-                      <input type="text" class="form-control form-control-sm" value="${item.small || item.original}" readonly onclick="this.select()">
-                    </div>
-                    <div>
-                      <label class="form-label small mb-1">Medium URL:</label>
-                      <input type="text" class="form-control form-control-sm" value="${item.medium || item.original}" readonly onclick="this.select()">
-                    </div>
-                    <div>
-                      <label class="form-label small mb-1">Large URL:</label>
-                      <input type="text" class="form-control form-control-sm" value="${item.large || item.original}" readonly onclick="this.select()">
-                    </div>
-                    <div>
-                      <label class="form-label small mb-1">Original URL:</label>
-                      <input type="text" class="form-control form-control-sm" value="${item.original}" readonly onclick="this.select()">
+                  <div class="small text-truncate" title="${item.title}">${item.title}</div>
+                </div>
+                <div class="overlay p-1">
+                  <div class="url-container">
+                    <div class="url-item">
+                      <button type="button" class="btn btn-sm btn-primary w-100" onclick="openImageSizeModal(${item.id})">Choose image size</button>
                     </div>
                   </div>
                 </div>
@@ -357,6 +460,41 @@ function openMediaPicker(targetTextareaId) {
         const modal = new bootstrap.Modal(document.getElementById('mediaPickerModal'));
         modal.show();
     });
+}
+
+// Store media data for image size modal
+let mediaData = {};
+
+function openImageSizeModal(mediaId) {
+    const data = mediaData[mediaId];
+    if (!data) return;
+    
+    // Populate URLs
+    document.getElementById('size-modal-orig').value = data.original;
+    document.getElementById('size-modal-small').value = data.small;
+    document.getElementById('size-modal-medium').value = data.medium;
+    document.getElementById('size-modal-large').value = data.large;
+    document.getElementById('size-modal-orig-webp').value = data.original_webp;
+    document.getElementById('size-modal-small-webp').value = data.small_webp;
+    document.getElementById('size-modal-medium-webp').value = data.medium_webp;
+    document.getElementById('size-modal-large-webp').value = data.large_webp;
+    
+    // Generate picture tags
+    const title = data.title || 'Image';
+    const alt = data.alt || title;
+    
+    document.getElementById('size-modal-picture-small').value = 
+        `<picture>\n  <source srcset="${data.small_webp}" type="image/webp">\n  <img src="${data.small}" alt="${alt}" title="${title}">\n</picture>`;
+    
+    document.getElementById('size-modal-picture-medium').value = 
+        `<picture>\n  <source srcset="${data.medium_webp}" type="image/webp">\n  <img src="${data.medium}" alt="${alt}" title="${title}">\n</picture>`;
+    
+    document.getElementById('size-modal-picture-large').value = 
+        `<picture>\n  <source srcset="${data.large_webp}" type="image/webp">\n  <img src="${data.large}" alt="${alt}" title="${title}">\n</picture>`;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('imageSizeModal'));
+    modal.show();
 }
 
 // Remove template block

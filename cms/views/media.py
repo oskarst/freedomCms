@@ -68,25 +68,39 @@ def media_list():
             medium_w = width_map.get('media_medium_width', 640)
             large_w = width_map.get('media_large_width', 1024)
 
-            # Generate resized variants
+            # Generate resized variants (both original format and WebP)
             small_path = os.path.join(IMAGES_DIR, f"{base}_small{ext}")
             medium_path = os.path.join(IMAGES_DIR, f"{base}_medium{ext}")
             large_path = os.path.join(IMAGES_DIR, f"{base}_large{ext}")
+            
+            # WebP versions
+            small_webp_path = os.path.join(IMAGES_DIR, f"{base}_small.webp")
+            medium_webp_path = os.path.join(IMAGES_DIR, f"{base}_medium.webp")
+            large_webp_path = os.path.join(IMAGES_DIR, f"{base}_large.webp")
+            original_webp_path = os.path.join(IMAGES_DIR, f"{base}.webp")
 
             try:
                 with Image.open(original_path) as img:
                     img = img.convert('RGB') if ext.lower() in ('.jpg', '.jpeg', '.webp') else img
-                    def save_resized(target_w, out_path):
+                    
+                    def save_resized(target_w, out_path, webp_path):
                         im = img.copy()
                         im.thumbnail((target_w, target_w*10), Image.LANCZOS)
                         im.save(out_path)
-                    save_resized(small_w, small_path)
-                    save_resized(medium_w, medium_path)
-                    save_resized(large_w, large_path)
+                        # Save WebP version
+                        im.save(webp_path, 'WEBP', quality=85)
+                    
+                    # Save original WebP version
+                    img.save(original_webp_path, 'WEBP', quality=85)
+                    
+                    save_resized(small_w, small_path, small_webp_path)
+                    save_resized(medium_w, medium_path, medium_webp_path)
+                    save_resized(large_w, large_path, large_webp_path)
             except Exception as e:
                 flash(f'Failed to resize image: {str(e)}', 'error')
                 # Cleanup on error
-                for p in [original_path, small_path, medium_path, large_path]:
+                for p in [original_path, small_path, medium_path, large_path, 
+                         original_webp_path, small_webp_path, medium_webp_path, large_webp_path]:
                     try:
                         if os.path.exists(p):
                             os.remove(p)
@@ -96,9 +110,11 @@ def media_list():
 
             # Insert DB record
             cursor.execute('''
-                INSERT INTO media (filename, ext, title, alt, original_path, small_path, medium_path, large_path)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (base, ext, title, alt, original_path, small_path, medium_path, large_path))
+                INSERT INTO media (filename, ext, title, alt, original_path, small_path, medium_path, large_path, 
+                                 original_webp_path, small_webp_path, medium_webp_path, large_webp_path)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (base, ext, title, alt, original_path, small_path, medium_path, large_path,
+                  original_webp_path, small_webp_path, medium_webp_path, large_webp_path))
             db.commit()
             flash('Image uploaded', 'success')
             return redirect(url_for('media.media_list'))
@@ -108,7 +124,11 @@ def media_list():
             cursor.execute('SELECT * FROM media WHERE id = ?', (media_id,))
             row = cursor.fetchone()
             if row:
-                for p in [row['original_path'], row['small_path'], row['medium_path'], row['large_path']]:
+                for p in [row['original_path'], row['small_path'], row['medium_path'], row['large_path'],
+                         row['original_webp_path'] if 'original_webp_path' in row.keys() else None,
+                         row['small_webp_path'] if 'small_webp_path' in row.keys() else None,
+                         row['medium_webp_path'] if 'medium_webp_path' in row.keys() else None,
+                         row['large_webp_path'] if 'large_webp_path' in row.keys() else None]:
                     try:
                         if p and os.path.exists(p):
                             os.remove(p)
@@ -144,6 +164,10 @@ def media_list():
             'small': to_url(it['small_path']),
             'medium': to_url(it['medium_path']),
             'large': to_url(it['large_path']),
+            'orig_webp': to_url(it['original_webp_path'] if 'original_webp_path' in it.keys() else None),
+            'small_webp': to_url(it['small_webp_path'] if 'small_webp_path' in it.keys() else None),
+            'medium_webp': to_url(it['medium_webp_path'] if 'medium_webp_path' in it.keys() else None),
+            'large_webp': to_url(it['large_webp_path'] if 'large_webp_path' in it.keys() else None),
             'filename': f"{it['filename']}{it['ext']}"
         })
 
@@ -184,6 +208,10 @@ def media_list_json():
             'small': to_url(it['small_path']),
             'medium': to_url(it['medium_path']),
             'large': to_url(it['large_path']),
+            'original_webp': to_url(it['original_webp_path'] if 'original_webp_path' in it.keys() else None),
+            'small_webp': to_url(it['small_webp_path'] if 'small_webp_path' in it.keys() else None),
+            'medium_webp': to_url(it['medium_webp_path'] if 'medium_webp_path' in it.keys() else None),
+            'large_webp': to_url(it['large_webp_path'] if 'large_webp_path' in it.keys() else None),
         })
 
     from flask import jsonify
