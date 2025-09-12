@@ -107,7 +107,7 @@ def export_pages():
         SELECT
             p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
-            t.title as template_title, t.slug as template_slug, t.default_parameters
+            t.title as template_title, t.slug as template_slug, t.category, t.default_parameters
         FROM pages p
         LEFT JOIN page_templates pt ON p.id = pt.page_id
         LEFT JOIN page_template_defs t ON pt.template_id = t.id
@@ -190,7 +190,7 @@ def export_selected_pages():
         SELECT
             p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
-            t.title as template_title, t.slug as template_slug, t.default_parameters
+            t.title as template_title, t.slug as template_slug, t.category, t.default_parameters
         FROM pages p
         LEFT JOIN page_templates pt ON p.id = pt.page_id
         LEFT JOIN page_template_defs t ON pt.template_id = t.id
@@ -583,30 +583,28 @@ def edit_page(page_id):
 
         return redirect(url_for('pages.edit_page', page_id=page_id))
 
-    # Ensure page has all default PAGE templates
-    cursor.execute('SELECT template_id FROM page_templates WHERE page_id = ?', (page_id,))
-    existing_ids = {row['template_id'] for row in cursor.fetchall()}
+    # Only ensure default templates are present if this is a new page with no templates
+    cursor.execute('SELECT COUNT(*) as count FROM page_templates WHERE page_id = ?', (page_id,))
+    template_count = cursor.fetchone()['count']
+    
+    if template_count == 0:
+        # This is a new page, add all default templates
+        cursor.execute("SELECT id FROM page_template_defs WHERE is_default = 1 ORDER BY sort_order")
+        default_ids = [row['id'] for row in cursor.fetchall()]
 
-    cursor.execute("SELECT id FROM page_template_defs WHERE is_default = 1 ORDER BY sort_order")
-    default_ids = [row['id'] for row in cursor.fetchall()]
-
-    if default_ids:
-        cursor.execute('SELECT COALESCE(MAX(sort_order), 0) as maxo FROM page_templates WHERE page_id = ?', (page_id,))
-        max_order_row = cursor.fetchone()
-        next_order = (max_order_row['maxo'] or 0) + 1
-        to_insert = [tid for tid in default_ids if tid not in existing_ids]
-        for tid in to_insert:
-            # Get template title for default
-            cursor.execute('SELECT title FROM page_template_defs WHERE id = ?', (tid,))
-            template_info = cursor.fetchone()
-            default_title = template_info['title'] if template_info else 'Untitled Block'
-            
-            cursor.execute('''
-                INSERT INTO page_templates (page_id, template_id, title, use_default, sort_order)
-                VALUES (?, ?, ?, 1, ?)
-            ''', (page_id, tid, default_title, next_order))
-            next_order += 1
-        if to_insert:
+        if default_ids:
+            next_order = 1
+            for tid in default_ids:
+                # Get template title for default
+                cursor.execute('SELECT title FROM page_template_defs WHERE id = ?', (tid,))
+                template_info = cursor.fetchone()
+                default_title = template_info['title'] if template_info else 'Untitled Block'
+                
+                cursor.execute('''
+                    INSERT INTO page_templates (page_id, template_id, title, use_default, sort_order)
+                    VALUES (?, ?, ?, 1, ?)
+                ''', (page_id, tid, default_title, next_order))
+                next_order += 1
             db.commit()
 
     # Get page templates
