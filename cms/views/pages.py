@@ -690,6 +690,80 @@ def delete_page(page_id):
     flash(f'Page "{page["title"]}" deleted successfully', 'success')
     return redirect(url_for('pages.pages'))
 
+@bp.route('/pages/<int:page_id>/duplicate', methods=['POST'])
+@login_required
+def duplicate_page(page_id):
+    """Duplicate page"""
+    db = get_db()
+    cursor = db.cursor()
+
+    # Get the original page
+    cursor.execute('SELECT * FROM pages WHERE id = ?', (page_id,))
+    original_page = cursor.fetchone()
+
+    if not original_page:
+        flash('Page not found', 'error')
+        return redirect(url_for('pages.pages'))
+
+    # Generate new title and slug
+    new_title = f"{original_page['title']} (Copy)"
+    new_slug = f"{original_page['slug']}-copy"
+    
+    # Ensure slug is unique
+    counter = 1
+    while True:
+        cursor.execute('SELECT id FROM pages WHERE slug = ?', (new_slug,))
+        if not cursor.fetchone():
+            break
+        new_slug = f"{original_page['slug']}-copy-{counter}"
+        counter += 1
+
+    # Create the new page
+    cursor.execute('''
+        INSERT INTO pages (title, slug, published, mode, created_at, updated_at)
+        VALUES (?, ?, 0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ''', (new_title, new_slug, original_page['mode'] if 'mode' in original_page.keys() else 'simple'))
+    
+    new_page_id = cursor.lastrowid
+
+    # Get all page templates from the original page
+    cursor.execute('''
+        SELECT pt.id, pt.template_id, pt.title, pt.custom_content, pt.use_default, pt.sort_order
+        FROM page_templates pt
+        WHERE pt.page_id = ?
+        ORDER BY pt.sort_order
+    ''', (page_id,))
+    original_templates = cursor.fetchall()
+
+    # Duplicate all page templates
+    for template in original_templates:
+        cursor.execute('''
+            INSERT INTO page_templates (page_id, template_id, title, custom_content, use_default, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (new_page_id, template['template_id'], template['title'], 
+              template['custom_content'], template['use_default'], template['sort_order']))
+        
+        new_template_id = cursor.lastrowid
+        
+        # Get parameters for the original template
+        cursor.execute('''
+            SELECT parameter_name, parameter_value
+            FROM page_template_parameters
+            WHERE page_template_id = ?
+        ''', (template['id'],))
+        parameters = cursor.fetchall()
+        
+        # Duplicate parameters
+        for param in parameters:
+            cursor.execute('''
+                INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
+                VALUES (?, ?, ?)
+            ''', (new_template_id, param['parameter_name'], param['parameter_value']))
+
+    db.commit()
+    flash(f'Page "{original_page["title"]}" duplicated successfully as "{new_title}"', 'success')
+    return redirect(url_for('pages.edit_page', page_id=new_page_id))
+
 @bp.route('/pages/<int:page_id>/preview')
 @login_required
 def preview_page(page_id):

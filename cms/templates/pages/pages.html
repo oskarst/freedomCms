@@ -74,6 +74,12 @@
                                         <a href="{{ url_for('pages.preview_page', page_id=page.id) }}" class="btn btn-sm btn-outline-info" target="_blank">
                                             <i class="bi bi-eye"></i> Preview
                                         </a>
+                                        <form method="post" action="{{ url_for('pages.duplicate_page', page_id=page.id) }}" class="d-inline"
+                                              onsubmit="return confirm('Are you sure you want to duplicate this page?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-warning">
+                                                <i class="bi bi-files"></i> Duplicate
+                                            </button>
+                                        </form>
                                         {% if page.published %}
                                         <form method="post" action="{{ url_for('pages.publish_page', page_id=page.id) }}" class="d-inline">
                                             <input type="hidden" name="from_list" value="1">
