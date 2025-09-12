@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Add Template Form (Independent) -->
+    <!-- Add Template Block Form (Independent) -->
     <form method="post" action="{{ url_for('pages.edit_page', page_id=page.id) }}" class="d-none" id="addTemplateForm" onsubmit="return validateTemplateSelection(this)">
         <input type="hidden" name="action" value="add_template">
         <input type="hidden" name="template_id" id="selectedTemplateId">
@@ -64,7 +64,7 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5>Page Templates</h5>
+                        <h5>Page Template Blocks</h5>
                         <div class="d-flex gap-2">
                             <select id="templateSelect" class="form-select form-select-sm" style="width: auto;">
                                 <option value="">Select template block to add...</option>

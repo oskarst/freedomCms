@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% set title = "Add Template" %}
+{% set title = "Add Template Block" %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
@@ -16,9 +16,9 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Add Template</h1>
+                <h1>Add Template Block</h1>
                 <a href="{{ url_for('templates_.templates') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Templates
+                    <i class="bi bi-arrow-left"></i> Back to Template Blocks
                 </a>
             </div>
         </div>
@@ -59,7 +59,7 @@
                                 <option value="content" selected>Content</option>
                                 <option value="system">System</option>
                             </select>
-                            <div class="form-text">System templates are used for HTML structure, content templates for page content</div>
+                            <div class="form-text">System template blocks are used for HTML structure, content template blocks for page content</div>
                         </div>
 
                         <div class="mb-3">
@@ -86,7 +86,7 @@
 
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-plus-circle"></i> Create Template
+                                <i class="bi bi-plus-circle"></i> Create Template Block
                             </button>
                             <a href="{{ url_for('templates_.templates') }}" class="btn btn-outline-secondary">Cancel</a>
                         </div>

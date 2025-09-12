@@ -6,7 +6,7 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Templates</h1>
+                <h1>Template Blocks</h1>
                 <div class="d-flex gap-2">
                     <form method="post" action="{{ url_for('templates_.export_selected_templates', tab=active_tab) }}" id="exportSelectedTemplatesForm" style="display:none"></form>
                     <button type="button" id="exportSelectedTemplatesBtn" class="btn btn-success" style="display:none">
@@ -19,7 +19,7 @@
                         <i class="bi bi-upload"></i> Import
                     </button>
                     <a href="{{ url_for('templates_.add_template', tab=active_tab) }}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add Template
+                        <i class="bi bi-plus-circle"></i> Add Template Block
                     </a>
                 </div>
             </div>
@@ -32,10 +32,10 @@
                 <div class="card-body">
                     <ul class="nav nav-tabs mb-3">
                         <li class="nav-item">
-                            <a class="nav-link {{ 'active' if active_tab == 'page' else '' }}" href="{{ url_for('templates_.templates', tab='page') }}">Page Templates</a>
+                            <a class="nav-link {{ 'active' if active_tab == 'page' else '' }}" href="{{ url_for('templates_.templates', tab='page') }}">Page Template Blocks</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ 'active' if active_tab == 'blog' else '' }}" href="{{ url_for('templates_.templates', tab='blog') }}">Blog Templates</a>
+                            <a class="nav-link {{ 'active' if active_tab == 'blog' else '' }}" href="{{ url_for('templates_.templates', tab='blog') }}">Blog Template Blocks</a>
                         </li>
                     </ul>
                     <div class="table-responsive">
@@ -93,7 +93,7 @@
                                             </button>
                                         </form>
                                         <form method="post" action="{{ url_for('templates_.delete_template', template_id=template.id, tab=active_tab) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this template?')">
+                                              onsubmit="return confirm('Are you sure you want to delete this template block?')">
                                             <button type="submit" class="btn btn-sm btn-outline-danger">
                                                 <i class="bi bi-trash"></i> Delete
                                             </button>
@@ -128,7 +128,7 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="overwriteTemplatesExisting" name="overwrite_existing">
                         <label class="form-check-label" for="overwriteTemplatesExisting">
-                            Overwrite existing templates with same slug
+                            Overwrite existing template blocks with same slug
                         </label>
                     </div>
                 </div>

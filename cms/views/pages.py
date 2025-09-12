@@ -22,8 +22,15 @@ def extract_parameters_from_content(content):
     pattern = r'\{\{\s*([^}]+)\s*\}\}'
     matches = re.findall(pattern, content)
     
-    # Remove duplicates and return unique parameter names
-    return list(set(matches))
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_matches = []
+    for match in matches:
+        if match not in seen:
+            seen.add(match)
+            unique_matches.append(match)
+    
+    return unique_matches
 
 def has_parameters(content):
     """Check if content has any parameters"""
@@ -36,7 +43,6 @@ def get_template_parameters(db, page_template_id):
         SELECT parameter_name, parameter_value 
         FROM page_template_parameters 
         WHERE page_template_id = ?
-        ORDER BY parameter_name
     ''', (page_template_id,))
     return {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
 

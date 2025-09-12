@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% set title = "Edit Template" %}
+{% set title = "Edit Template Block" %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
@@ -16,9 +16,9 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Edit Template: {{ template.title }}</h1>
+                <h1>Edit Template Block: {{ template.title }}</h1>
                 <a href="{{ url_for('templates_.templates') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Templates
+                    <i class="bi bi-arrow-left"></i> Back to Template Blocks
                 </a>
             </div>
         </div>
@@ -66,7 +66,7 @@
                                 <option value="page" {{ 'selected' if not template.slug.startswith('blog_') else '' }}>Page</option>
                                 <option value="blog" {{ 'selected' if template.slug.startswith('blog_') else '' }}>Blog</option>
                             </select>
-                            <div class="form-text">Type is derived from the slug for existing templates.</div>
+                            <div class="form-text">Type is derived from the slug for existing template blocks.</div>
                         </div>
 
                         <div class="mb-3">
@@ -75,7 +75,7 @@
                                 <option value="content" {{ 'selected' if template.category == 'content' else '' }}>Content</option>
                                 <option value="system" {{ 'selected' if template.category == 'system' else '' }}>System</option>
                             </select>
-                            <div class="form-text">System templates are used for HTML structure, content templates for page content</div>
+                            <div class="form-text">System template blocks are used for HTML structure, content template blocks for page content</div>
                         </div>
 
                         <div class="mb-3">
