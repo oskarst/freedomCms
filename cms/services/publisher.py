@@ -33,8 +33,7 @@ def generate_page_html(page_id, preview=False):
     # Build HTML content
     html_content = ''
     for pt in page_templates:
-        # For blocks with parameters, always use the template content (either default or custom)
-        # and replace parameters with saved values
+        # Use the content based on user's choice (use_default flag)
         if pt['use_default']:
             content = pt['default_content']
         else:
@@ -47,15 +46,6 @@ def generate_page_html(page_id, preview=False):
             WHERE page_template_id = ?
         ''', (pt['id'],))
         parameters = {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
-        
-        # If we have parameters, we need to use the template content that has the parameter placeholders
-        # But only if the current content doesn't have parameters
-        if parameters and content and '{{' not in content:
-            # Use custom_content if it has parameters, otherwise use default_content
-            if pt['custom_content'] and '{{' in pt['custom_content']:
-                content = pt['custom_content']
-            elif pt['default_content'] and '{{' in pt['default_content']:
-                content = pt['default_content']
         
         # Replace parameters with actual content
         if content and '{{' in content and parameters:
