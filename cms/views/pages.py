@@ -583,19 +583,10 @@ def edit_page(page_id):
             # Remove template block from page
             page_template_id = request.form.get('page_template_id')
             if page_template_id:
-                # Check if it's a system template (don't allow removal)
-                cursor.execute('''
-                    SELECT t.category FROM page_templates pt
-                    JOIN page_template_defs t ON pt.template_id = t.id
-                    WHERE pt.id = ? AND pt.page_id = ?
-                ''', (page_template_id, page_id))
-                template_info = cursor.fetchone()
-                if template_info and template_info['category'] == 'system':
-                    flash('Cannot remove system template blocks', 'error')
-                else:
-                    cursor.execute('DELETE FROM page_templates WHERE id = ? AND page_id = ?', (page_template_id, page_id))
-                    db.commit()
-                    flash('Template block removed successfully', 'success')
+                # Delete the template block (system blocks are now allowed to be deleted)
+                cursor.execute('DELETE FROM page_templates WHERE id = ? AND page_id = ?', (page_template_id, page_id))
+                db.commit()
+                flash('Template block removed successfully', 'success')
             else:
                 flash('Invalid template ID', 'error')
 
@@ -697,6 +688,11 @@ def preview_page(page_id):
     preview_path = os.path.join(PUB_DIR, preview_filename)
     
     try:
+        # Rewrite absolute image paths to relative paths for preview
+        # This fixes the issue where /img/image.jpg should be ./img/image.jpg in preview
+        html_content = html_content.replace('src="/img/', 'src="./img/')
+        html_content = html_content.replace('href="/img/', 'href="./img/')
+        
         with open(preview_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
     except Exception as e:
