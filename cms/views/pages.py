@@ -127,7 +127,7 @@ def export_pages():
                 'title': row['title'],
                 'slug': row['slug'],
                 'published': row['published'],
-                'mode': row.get('mode', 'simple'),
+                'mode': row['mode'] if 'mode' in row.keys() else 'simple',
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
                 'templates': []
@@ -211,7 +211,7 @@ def export_selected_pages():
                 'title': row['title'],
                 'slug': row['slug'],
                 'published': row['published'],
-                'mode': row.get('mode', 'simple'),
+                'mode': row['mode'] if 'mode' in row.keys() else 'simple',
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
                 'templates': []
