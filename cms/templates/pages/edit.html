@@ -84,7 +84,7 @@
                                 <div class="template-block-header" onclick="toggleBlockContent({{ pt.id }})" style="cursor: pointer;">
                                     <div class="d-flex justify-content-between align-items-center w-100">
                                         <div class="d-flex align-items-center">
-                                            <input type="text" class="form-control form-control-sm border-0 bg-transparent fw-bold" 
+                                            <input type="text" class="form-control form-control-sm bg-transparent fw-bold editable-title" 
                                                    name="title_{{ pt.id }}" value="{{ pt.custom_title or pt.title }}" 
                                                    placeholder="{{ pt.title }}" style="width: auto; min-width: 150px;" onclick="event.stopPropagation();">
                                             {% set template_count = page_templates | selectattr('template_id', 'equalto', pt.template_id) | list | length %}
@@ -248,6 +248,23 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+}
+
+/* Editable Title Styling */
+.editable-title {
+    border: 1px solid #dee2e6 !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.editable-title:hover {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.editable-title:focus {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    outline: 0;
 }
 
 .template-block-header {
