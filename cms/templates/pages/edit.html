@@ -753,6 +753,27 @@ function toggleDefaultContent(checkbox, textareaId) {
             </div>
           </div>
         </div>
+        
+        <!-- Quill Image Insertion Buttons -->
+        <div class="row mt-4" id="quill-insert-buttons" style="display: none;">
+          <div class="col-12">
+            <h6>Insert into WYSIWYG Editor:</h6>
+            <div class="d-flex gap-2 flex-wrap">
+              <button type="button" class="btn btn-primary btn-sm" onclick="insertImageIntoQuill(document.getElementById('size-modal-small').value, document.getElementById('size-modal-small').alt || 'Image', document.getElementById('size-modal-small').title || 'Image')">
+                Insert Small
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="insertImageIntoQuill(document.getElementById('size-modal-medium').value, document.getElementById('size-modal-medium').alt || 'Image', document.getElementById('size-modal-medium').title || 'Image')">
+                Insert Medium
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="insertImageIntoQuill(document.getElementById('size-modal-large').value, document.getElementById('size-modal-large').alt || 'Image', document.getElementById('size-modal-large').title || 'Image')">
+                Insert Large
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="insertImageIntoQuill(document.getElementById('size-modal-orig').value, document.getElementById('size-modal-orig').alt || 'Image', document.getElementById('size-modal-orig').title || 'Image')">
+                Insert Original
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -831,9 +852,51 @@ function openImageSizeModal(mediaId) {
     document.getElementById('size-modal-picture-large').value = 
         `<picture>\n  <source srcset="${data.large_webp}" type="image/webp">\n  <img src="${data.large}" alt="${alt}" title="${title}">\n</picture>`;
     
+    // Show/hide Quill insertion buttons based on whether a Quill editor is active
+    const quillButtons = document.getElementById('quill-insert-buttons');
+    if (window.currentQuillEditor) {
+        quillButtons.style.display = 'block';
+    } else {
+        quillButtons.style.display = 'none';
+    }
+    
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('imageSizeModal'));
     modal.show();
+}
+
+// Function to insert image into Quill editor
+function insertImageIntoQuill(imageUrl, altText, titleText) {
+    if (window.currentQuillEditor) {
+        const range = window.currentQuillEditor.getSelection();
+        const index = range ? range.index : window.currentQuillEditor.getLength();
+        
+        // Insert the image
+        window.currentQuillEditor.insertEmbed(index, 'image', imageUrl);
+        
+        // Add alt and title attributes if needed
+        if (altText || titleText) {
+            setTimeout(() => {
+                const imgElement = window.currentQuillEditor.container.querySelector('img[src="' + imageUrl + '"]');
+                if (imgElement) {
+                    if (altText) imgElement.alt = altText;
+                    if (titleText) imgElement.title = titleText;
+                }
+            }, 100);
+        }
+        
+        // Move cursor after the image
+        window.currentQuillEditor.setSelection(index + 1);
+        
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('imageSizeModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Clear the current editor reference
+        window.currentQuillEditor = null;
+    }
 }
 
 // Remove template block
@@ -1120,16 +1183,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 const quill = new Quill(container, {
                     theme: 'snow',
                     modules: {
-                        toolbar: [
-                            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                            ['bold', 'italic', 'underline', 'strike'],
-                            [{ 'color': [] }, { 'background': [] }],
-                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                            [{ 'indent': '-1'}, { 'indent': '+1' }],
-                            [{ 'align': [] }],
-                            ['link', 'blockquote', 'code-block'],
-                            ['clean']
-                        ]
+                        toolbar: {
+                            container: [
+                                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                                ['bold', 'italic', 'underline', 'strike'],
+                                [{ 'color': [] }, { 'background': [] }],
+                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                [{ 'indent': '-1'}, { 'indent': '+1' }],
+                                [{ 'align': [] }],
+                                ['link', 'blockquote', 'code-block'],
+                                ['image'], // Add image button
+                                ['clean']
+                            ],
+                            handlers: {
+                                'image': function() {
+                                    // Store reference to this Quill instance for image insertion
+                                    window.currentQuillEditor = quill;
+                                    openMediaPicker();
+                                }
+                            }
+                        }
                     },
                     placeholder: textarea.placeholder || 'Enter content...'
                 });
