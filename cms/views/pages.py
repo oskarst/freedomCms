@@ -32,21 +32,31 @@ def cleanup_old_previews(page_id, current_filename=None):
             pass  # File might already be deleted
 
 def extract_parameters_from_content(content):
-    """Extract parameter names from template content like {{ Content1 }}, {{ Title }}, etc."""
+    """Extract parameter names and types from template content like {{ Content1 }}, {{ Title:wysiwyg }}, etc."""
     if not content:
         return []
     
-    # Find all {{ parameter_name }} patterns
-    pattern = r'\{\{\s*([^}]+)\s*\}\}'
+    # Find all {{ parameter_name:type }} or {{ parameter_name }} patterns
+    pattern = r'\{\{\s*([^}:]+)(?::([^}]+))?\s*\}\}'
     matches = re.findall(pattern, content)
     
-    # Remove duplicates while preserving order
+    # Remove duplicates while preserving order, extract parameter info
     seen = set()
     unique_matches = []
     for match in matches:
-        if match not in seen:
-            seen.add(match)
-            unique_matches.append(match)
+        param_name = match[0].strip()
+        param_type = match[1].strip() if match[1] else 'text'  # Default to 'text' if no type specified
+        
+        # Create parameter info dict
+        param_info = {
+            'name': param_name,
+            'type': param_type,
+            'full_name': f"{param_name}:{param_type}" if param_type != 'text' else param_name
+        }
+        
+        if param_name not in seen:
+            seen.add(param_name)
+            unique_matches.append(param_info)
     
     return unique_matches
 
@@ -540,11 +550,11 @@ def edit_page(page_id):
                 
                 if content_to_check and has_parameters(content_to_check):
                     parameters = {}
-                    param_names = extract_parameters_from_content(content_to_check)
-                    for param_name in param_names:
-                        param_key = f'param_{pt["id"]}_{param_name}'
+                    param_info_list = extract_parameters_from_content(content_to_check)
+                    for param_info in param_info_list:
+                        param_key = f'param_{pt["id"]}_{param_info["name"]}'
                         param_value = request.form.get(param_key, '')
-                        parameters[param_name] = param_value
+                        parameters[param_info["name"]] = param_value
                     save_template_parameters(db, pt['id'], parameters)
 
             db.commit()
@@ -657,7 +667,9 @@ def edit_page(page_id):
         pt_dict['parameters'] = get_template_parameters(db, pt['id'])
         content_to_check = pt['custom_content'] or pt['default_content']
         pt_dict['has_parameters'] = has_parameters(content_to_check)
-        pt_dict['parameter_names'] = extract_parameters_from_content(content_to_check)
+        pt_dict['parameter_info'] = extract_parameters_from_content(content_to_check)
+        # Keep backward compatibility
+        pt_dict['parameter_names'] = [param['name'] for param in pt_dict['parameter_info']]
         page_templates_with_params.append(pt_dict)
     
     page_templates = page_templates_with_params

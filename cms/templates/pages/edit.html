@@ -156,13 +156,32 @@
                                         <div class="mb-4">
                                             <h6 class="text-muted mb-3">Block Parameters:</h6>
                                             <div id="parameters-{{ pt.id }}">
-                                                {% for param_name in pt.parameter_names %}
+                                                {% for param_info in pt.parameter_info %}
                                                 <div class="mb-3">
-                                                    <label class="form-label small">{{ param_name }}:</label>
-                                                    <textarea class="form-control form-control-sm" 
-                                                              name="param_{{ pt.id }}_{{ param_name }}" 
-                                                              rows="4" 
-                                                              placeholder="Enter content for {{ param_name }}">{{ pt.parameters.get(param_name, '') }}</textarea>
+                                                    <label class="form-label small">
+                                                        {{ param_info.name }}
+                                                        {% if param_info.type != 'text' %}
+                                                            <span class="badge bg-secondary ms-1">{{ param_info.type }}</span>
+                                                        {% endif %}:
+                                                    </label>
+                                                    {% if param_info.type == 'code' %}
+                                                        <textarea class="form-control form-control-sm code-html" 
+                                                                  name="param_{{ pt.id }}_{{ param_info.name }}" 
+                                                                  rows="6" 
+                                                                  placeholder="Enter code for {{ param_info.name }}">{{ pt.parameters.get(param_info.name, '') }}</textarea>
+                                                    {% elif param_info.type == 'wysiwyg' %}
+                                                        <div class="wysiwyg-editor" data-target="param_{{ pt.id }}_{{ param_info.name }}">
+                                                            <textarea class="form-control form-control-sm" 
+                                                                      name="param_{{ pt.id }}_{{ param_info.name }}" 
+                                                                      rows="4" 
+                                                                      placeholder="Enter content for {{ param_info.name }}">{{ pt.parameters.get(param_info.name, '') }}</textarea>
+                                                        </div>
+                                                    {% else %}
+                                                        <textarea class="form-control form-control-sm" 
+                                                                  name="param_{{ pt.id }}_{{ param_info.name }}" 
+                                                                  rows="4" 
+                                                                  placeholder="Enter content for {{ param_info.name }}">{{ pt.parameters.get(param_info.name, '') }}</textarea>
+                                                    {% endif %}
                                                 </div>
                                                 {% endfor %}
                                             </div>
@@ -209,13 +228,32 @@
                             {% if pt.has_parameters %}
                             <div class="mb-4">
                                 <h6 class="text-primary mb-3">{{ pt.title or 'Untitled Block' }}</h6>
-                                {% for param_name in pt.parameter_names %}
+                                {% for param_info in pt.parameter_info %}
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">{{ param_name }}:</label>
-                                    <textarea class="form-control" 
-                                              name="param_{{ pt.id }}_{{ param_name }}" 
-                                              rows="4" 
-                                              placeholder="Enter content for {{ param_name }}">{{ pt.parameters.get(param_name, '') }}</textarea>
+                                    <label class="form-label fw-bold">
+                                        {{ param_info.name }}
+                                        {% if param_info.type != 'text' %}
+                                            <span class="badge bg-secondary ms-1">{{ param_info.type }}</span>
+                                        {% endif %}:
+                                    </label>
+                                    {% if param_info.type == 'code' %}
+                                        <textarea class="form-control code-html" 
+                                                  name="param_{{ pt.id }}_{{ param_info.name }}" 
+                                                  rows="6" 
+                                                  placeholder="Enter code for {{ param_info.name }}">{{ pt.parameters.get(param_info.name, '') }}</textarea>
+                                    {% elif param_info.type == 'wysiwyg' %}
+                                        <div class="wysiwyg-editor" data-target="param_{{ pt.id }}_{{ param_info.name }}">
+                                            <textarea class="form-control" 
+                                                      name="param_{{ pt.id }}_{{ param_info.name }}" 
+                                                      rows="4" 
+                                                      placeholder="Enter content for {{ param_info.name }}">{{ pt.parameters.get(param_info.name, '') }}</textarea>
+                                        </div>
+                                    {% else %}
+                                        <textarea class="form-control" 
+                                                  name="param_{{ pt.id }}_{{ param_info.name }}" 
+                                                  rows="4" 
+                                                  placeholder="Enter content for {{ param_info.name }}">{{ pt.parameters.get(param_info.name, '') }}</textarea>
+                                    {% endif %}
                                 </div>
                                 {% endfor %}
                             </div>
@@ -404,6 +442,29 @@
     background-color: #f8d7da;
     border-color: #f5c6cb;
     color: #721c24;
+}
+
+/* Parameter Type Styles */
+.parameter-type-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.wysiwyg-editor {
+    position: relative;
+}
+
+.wysiwyg-editor .form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Code editor styling for parameter inputs */
+.param-code-editor {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.4;
 }
 </style>
 <script>
@@ -938,6 +999,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeIndentation();
     
     if (window.CodeMirror) {
+        // Initialize CodeMirror for template code editors
         document.querySelectorAll('textarea.code-html').forEach(function(ta) {
             const cm = CodeMirror.fromTextArea(ta, {
                 lineNumbers: true,
@@ -951,6 +1013,22 @@ document.addEventListener('DOMContentLoaded', function() {
             // Hide original textarea to prevent double fields
             ta.style.display = 'none';
         });
+        
+        // Initialize CodeMirror for parameter code editors
+        document.querySelectorAll('textarea.code-html[class*="param"]').forEach(function(ta) {
+            const cm = CodeMirror.fromTextArea(ta, {
+                lineNumbers: true,
+                mode: 'text/html',
+                theme: 'neo',
+                viewportMargin: Infinity,
+                lineWrapping: true
+            });
+            // Keep a handle to the CM instance
+            ta._cm = cm;
+            // Hide original textarea
+            ta.style.display = 'none';
+        });
+        
         // Ensure CodeMirror values are saved back to textareas on submit
         const form = document.getElementById('pageForm');
         if (form) {
