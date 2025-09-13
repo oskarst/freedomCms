@@ -703,10 +703,11 @@ function reinitializeSortable() {
 // CMS Block Indentation System
 // Usage: Add tags like <cms:hero-1> and </cms:hero-1> to block captions
 // Example:
-// Block 1: "Header <cms:hero-1>"     -> Opens hero-1 section
+// Block 1: "Header <cms:hero-1>"     -> Opens hero-1 section (not indented)
 // Block 2: "Content"                 -> Indented (inside hero-1)
-// Block 3: "Footer </cms:hero-1>"    -> Closes hero-1 section
+// Block 3: "Footer </cms:hero-1>"    -> Closes hero-1 section (not indented)
 // Block 4: "Normal content"          -> Back to normal level
+// Note: Blocks with opening tags, closing tags, or both are not indented themselves
 function parseCMSTags(caption) {
     if (!caption) return { openTags: [], closeTags: [] };
     
@@ -768,14 +769,14 @@ function calculateBlockIndentation() {
             });
         }
         
-        // Process opening tags (add to stack)
-        openTags.forEach(tag => {
-            indentationStack.push(tag);
-        });
+        // Check if this block has opening tags, closing tags, or both (should not be indented)
+        const hasOpeningTags = openTags.length > 0;
+        const hasClosingTags = closeTags.length > 0;
+        const hasBothTags = hasOpeningTags && hasClosingTags;
         
-        // Apply indentation based on stack depth
+        // Apply indentation based on stack depth (but not if block has opening or closing tags)
         const indentLevel = indentationStack.length;
-        if (indentLevel > 0) {
+        if (indentLevel > 0 && !hasOpeningTags && !hasClosingTags) {
             block.classList.add('indented');
             if (indentLevel <= 5) {
                 block.classList.add(`indent-level-${indentLevel}`);
@@ -785,6 +786,11 @@ function calculateBlockIndentation() {
                 block.style.marginLeft = `${indentLevel * 50}px`;
             }
         }
+        
+        // Process opening tags (add to stack)
+        openTags.forEach(tag => {
+            indentationStack.push(tag);
+        });
         
         // Process closing tags (remove from stack)
         closeTags.forEach(tag => {
