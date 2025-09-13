@@ -505,6 +505,64 @@
     font-size: 0.9rem;
     line-height: 1.4;
 }
+
+/* Parameter CodeMirror styling */
+.CodeMirror {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.CodeMirror:focus-within {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Ensure proper positioning for parameter code editors */
+textarea.code-html[class*="param"] + .CodeMirror {
+    margin-top: 0;
+    margin-left: 0;
+}
+
+/* Advanced mode parameter code editor styling */
+.advanced-mode .CodeMirror {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.advanced-mode .CodeMirror .CodeMirror-gutters {
+    border-right: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    min-width: 3em;
+}
+
+.advanced-mode .CodeMirror .CodeMirror-linenumber {
+    color: #6c757d;
+    padding: 0 8px;
+    min-width: 2.5em;
+    text-align: right;
+}
+
+.advanced-mode .CodeMirror .CodeMirror-lines {
+    padding-left: 8px;
+}
+
+/* General CodeMirror line number spacing fix */
+.CodeMirror .CodeMirror-gutters {
+    min-width: 3em;
+}
+
+.CodeMirror .CodeMirror-linenumber {
+    min-width: 2.5em;
+    text-align: right;
+    padding-right: 8px;
+}
+
+.CodeMirror .CodeMirror-lines {
+    padding-left: 8px;
+}
 </style>
 <script>
 // Initialize drag and drop sorting
@@ -1101,12 +1159,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 mode: 'text/html',
                 theme: 'neo',
                 viewportMargin: Infinity,
-                readOnly: ta.hasAttribute('readonly')
+                readOnly: ta.hasAttribute('readonly'),
+                gutters: ['CodeMirror-linenumbers']
             });
             // Keep a handle to the CM instance for later toggling readOnly
             ta._cm = cm;
             // Hide original textarea to prevent double fields
             ta.style.display = 'none';
+            
+            // Ensure proper gutter spacing
+            setTimeout(() => {
+                cm.refresh();
+            }, 100);
         });
         
         // Initialize CodeMirror for parameter code editors
@@ -1116,12 +1180,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 mode: 'text/html',
                 theme: 'neo',
                 viewportMargin: Infinity,
-                lineWrapping: true
+                lineWrapping: true,
+                indentUnit: 4,
+                tabSize: 4,
+                indentWithTabs: true,
+                gutters: ['CodeMirror-linenumbers']
             });
             // Keep a handle to the CM instance
             ta._cm = cm;
             // Hide original textarea
             ta.style.display = 'none';
+            
+            // Apply Bootstrap form control styling
+            cm.getWrapperElement().style.border = '1px solid #ced4da';
+            cm.getWrapperElement().style.borderRadius = '0.375rem';
+            cm.getWrapperElement().style.fontSize = '0.875rem';
+            
+            // Ensure proper gutter spacing
+            setTimeout(() => {
+                cm.refresh();
+            }, 100);
         });
         
         // Ensure CodeMirror values are saved back to textareas on submit
