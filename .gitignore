@@ -16,6 +16,7 @@ venv/
 .venv/
 pip-log.txt
 pip-delete-this-directory.txt
+wsgi.py
 
 # IDE
 .vscode/
