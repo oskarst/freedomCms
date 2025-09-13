@@ -5,6 +5,11 @@
 <div class="container py-4">
   <h1>Help & Documentation</h1>
 
+  <div class="alert alert-info">
+    <h5><i class="bi bi-info-circle"></i> Quick Start</h5>
+    <p>This CMS helps you create websites using reusable template blocks. Each page is built from multiple blocks that can be customized individually.</p>
+  </div>
+
   <h3 class="mt-4">Templates Overview</h3>
   <p>Templates are reusable HTML blocks stored in the database. They can be:</p>
   <ul>
@@ -12,11 +17,34 @@
     <li><strong>Content</strong>: visible content sections (hero, menu, section, paragraph, etc.)</li>
   </ul>
 
-  <h3 class="mt-4">Page Templates</h3>
+  <h3 class="mt-4">Page Management</h3>
+  <div class="row">
+    <div class="col-md-6">
+      <h5>Creating Pages</h5>
+      <ul>
+        <li>Click <strong>"Add Page"</strong> from the Pages section</li>
+        <li>Enter page title and slug (URL-friendly identifier)</li>
+        <li>New pages get all <strong>default</strong> page templates in the current order</li>
+        <li>Pages are created as drafts by default</li>
+      </ul>
+    </div>
+    <div class="col-md-6">
+      <h5>Page Properties</h5>
+      <ul>
+        <li><strong>Edit Title & Slug</strong>: Modify directly in the "Page Information" section</li>
+        <li><strong>Auto-slug Generation</strong>: Slugs are automatically created from titles</li>
+        <li><strong>Unique Slugs</strong>: System prevents duplicate page slugs</li>
+        <li><strong>Duplicate Pages</strong>: Use the "Duplicate" button to copy existing pages</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="mt-4">Page Templates & Blocks</h3>
   <ul>
-    <li>New pages get all <strong>default</strong> page templates (non-blog) in the current order.</li>
-    <li>On Edit Page, you can reorder blocks; this order is saved per-page.</li>
-    <li>Each block has “Use default” to either use the template’s content or a page-specific override.</li>
+    <li>On Edit Page, you can <strong>reorder blocks</strong> using drag and drop or up/down arrows</li>
+    <li>Each block has <strong>"Use default"</strong> to either use the template's content or a page-specific override</li>
+    <li><strong>System blocks</strong> are hidden by default but can be shown with the toggle button</li>
+    <li><strong>Block indentation</strong> can be controlled using CMS tags in block captions</li>
   </ul>
 
   <h3 class="mt-4">Blog Templates</h3>
@@ -91,6 +119,151 @@
     <li>Upload images; small/medium/large variants are created based on settings.</li>
     <li>Hover an image to copy a ready-made <code>&lt;img&gt;</code> tag for any size.</li>
   </ul>
+
+  <hr class="my-5">
+
+  <h2 class="mt-5">Advanced Features</h2>
+
+  <h3 class="mt-4">Block Reordering</h3>
+  <div class="row">
+    <div class="col-md-6">
+      <h5>Drag and Drop</h5>
+      <ul>
+        <li>Click and hold the <strong>grip icon</strong> (⋮⋮) on any block</li>
+        <li>Drag the block to your desired position</li>
+        <li>Release to place the block in the new location</li>
+        <li>Smooth animations provide visual feedback during reordering</li>
+      </ul>
+    </div>
+    <div class="col-md-6">
+      <h5>Up/Down Arrows</h5>
+      <ul>
+        <li>Use the <strong>up/down arrow buttons</strong> for precise positioning</li>
+        <li>Works alongside drag and drop functionality</li>
+        <li>Perfect for fine-tuning block order</li>
+        <li>Changes are saved automatically when you submit the form</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="mt-4">CMS Block Indentation</h3>
+  <p>Organize your page blocks visually using CMS tags in block captions:</p>
+  
+  <div class="alert alert-light">
+    <h6><strong>How it works:</strong></h6>
+    <ul class="mb-0">
+      <li>Add <code>&lt;cms:section-name&gt;</code> to a block caption to open a section</li>
+      <li>All blocks after this will be indented by 50px</li>
+      <li>Add <code>&lt;/cms:section-name&gt;</code> to close the section</li>
+      <li>Blocks with tags act as section boundaries and are not indented themselves</li>
+    </ul>
+  </div>
+
+  <h5>Example:</h5>
+  <pre><code>Block 1: "Header &lt;cms:hero&gt;"      → Opens hero section (not indented)
+Block 2: "Content"                → Indented 50px (inside hero)
+Block 3: "More Content"           → Indented 50px (inside hero)
+Block 4: "Footer &lt;/cms:hero&gt;"     → Closes hero section (not indented)
+Block 5: "Normal content"         → Back to normal level</code></pre>
+
+  <h3 class="mt-4">Parameter Types</h3>
+  <p>Template parameters can have different input types for enhanced editing:</p>
+
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title"><span class="badge bg-primary">Text</span> Plain Text</h6>
+          <p class="card-text small">Default parameter type for regular text content.</p>
+          <code>{{ "{{slogan}}" }}</code><br>
+          <code>{{ "{{title:text}}" }}</code>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title"><span class="badge bg-warning">Code</span> Code Editor</h6>
+          <p class="card-text small">Syntax highlighting for HTML, CSS, and JavaScript code.</p>
+          <code>{{ "{{html:code}}" }}</code><br>
+          <code>{{ "{{css:code}}" }}</code>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title"><span class="badge bg-info">WYSIWYG</span> Rich Text</h6>
+          <p class="card-text small">Enhanced textarea ready for rich text editor integration.</p>
+          <code>{{ "{{content:wysiwyg}}" }}</code><br>
+          <code>{{ "{{description:wysiwyg}}" }}</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info mt-3">
+    <h6><strong>Features:</strong></h6>
+    <ul class="mb-0">
+      <li><strong>Type Badges</strong>: Visual indicators show parameter types next to labels</li>
+      <li><strong>Syntax Highlighting</strong>: Code parameters get full CodeMirror integration</li>
+      <li><strong>Enhanced Editing</strong>: WYSIWYG parameters have improved styling</li>
+      <li><strong>Backward Compatible</strong>: Existing parameters without types default to plain text</li>
+    </ul>
+  </div>
+
+  <h3 class="mt-4">Page Duplication</h3>
+  <p>Easily create copies of existing pages with all content and templates:</p>
+  <ul>
+    <li>Click the <strong>"Duplicate"</strong> button next to any page in the page list</li>
+    <li>Confirm the duplication in the dialog</li>
+    <li>The new page will have the same content with "(Copy)" added to the title</li>
+    <li>Slug will be automatically adjusted to ensure uniqueness</li>
+    <li>All duplicated pages are created as drafts (unpublished)</li>
+    <li>You'll be automatically redirected to edit the new duplicated page</li>
+  </ul>
+
+  <h3 class="mt-4">System Block Management</h3>
+  <p>System blocks (HTML structure, meta tags, etc.) are hidden by default for a cleaner editing experience:</p>
+  <ul>
+    <li><strong>Toggle Button</strong>: Show/hide system blocks with the button in the page editor header</li>
+    <li><strong>Visual Feedback</strong>: Button changes icon and color based on current state</li>
+    <li><strong>Settings Control</strong>: Configure default behavior in the Settings page</li>
+    <li><strong>Per-User Preference</strong>: Each admin can set their preferred default</li>
+  </ul>
+
+  <h3 class="mt-4">Import/Export</h3>
+  <div class="row">
+    <div class="col-md-6">
+      <h5>Export Pages</h5>
+      <ul>
+        <li><strong>Export All</strong>: Download all pages as JSON</li>
+        <li><strong>Selective Export</strong>: Choose specific pages using checkboxes</li>
+        <li><strong>Complete Data</strong>: Includes all templates, content, and parameters</li>
+        <li><strong>Smart Selection</strong>: Use master checkbox to select/deselect all</li>
+      </ul>
+    </div>
+    <div class="col-md-6">
+      <h5>Import Pages</h5>
+      <ul>
+        <li><strong>JSON Import</strong>: Upload exported JSON files</li>
+        <li><strong>Conflict Resolution</strong>: Option to overwrite existing pages</li>
+        <li><strong>Template Validation</strong>: Checks if referenced templates exist</li>
+        <li><strong>Bulk Operations</strong>: Import multiple pages at once</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="alert alert-success mt-4">
+    <h5><i class="bi bi-lightbulb"></i> Pro Tips</h5>
+    <ul class="mb-0">
+      <li><strong>Use CMS indentation</strong> to organize complex page structures visually</li>
+      <li><strong>Code parameters</strong> are perfect for custom HTML, CSS, or JavaScript</li>
+      <li><strong>Duplicate pages</strong> to quickly create similar pages with slight variations</li>
+      <li><strong>Export before major changes</strong> to keep backups of your work</li>
+      <li><strong>System blocks</strong> control the overall page structure - hide them to focus on content</li>
+    </ul>
+  </div>
 
   <p class="text-muted mt-4">Tip: All admin UI is Bootstrap-based; public output depends entirely on your templates.</p>
 </div>

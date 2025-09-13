@@ -11,6 +11,10 @@ A simple, one-file Flask-based Content Management System with Bootstrap UI and S
 - **Settings Management**: Configure site-wide settings
 - **Bootstrap UI**: Modern, responsive admin interface
 - **Preview & Publish**: Preview pages before publishing them
+- **Editable Page Properties**: Edit page title and slug directly from the edit page
+- **Page Duplication**: Duplicate existing pages with all content and templates
+- **CMS Block Indentation**: Visual indentation system based on CMS tags
+- **Parameter Types**: Support for different parameter types (text, code, wysiwyg)
 
 ## Installation
 
@@ -60,6 +64,13 @@ The CMS provides **smart template management** with override tracking:
 - ✅ **System Block Hiding**: Hide system template blocks by default in page editor
 - ✅ **Toggle Controls**: Show/hide system blocks with button click
 - ✅ **Configurable Settings**: Admin setting to control default behavior
+- ✅ **Editable Page Properties**: Edit page title and slug directly in the page editor
+- ✅ **Auto-slug Generation**: Automatic URL-friendly slug generation from page titles
+- ✅ **Page Duplication**: Duplicate existing pages with all content and templates
+- ✅ **Smart Naming**: Automatic naming for duplicated pages with unique slugs
+- ✅ **Drag and Drop Reordering**: Sort page blocks by dragging with visual feedback
+- ✅ **CMS Block Indentation**: Visual indentation system based on CMS tags
+- ✅ **Parameter Types**: Support for different input types (text, code, wysiwyg)
 
 ## Generated Pages Features
 
@@ -120,6 +131,101 @@ The CMS provides smart management of system template blocks:
 - **Per-User Control**: Each admin can set their preferred default
 - **Persistent Setting**: Setting is saved and applied across sessions
 
+## Latest Features
+
+### Page Property Editing
+The CMS now allows direct editing of page properties:
+
+#### Editable Title and Slug
+- **Direct Editing**: Edit page title and slug directly from the edit page
+- **Real-time Validation**: Client-side validation for proper slug format
+- **Auto-slug Generation**: Automatically generates URL-friendly slugs from titles
+- **Unique Slug Checking**: Prevents duplicate slugs across all pages
+- **Smart Updates**: Updates slug when title changes but preserves manual edits
+
+#### Usage
+1. **Edit Page**: Go to any page's edit view
+2. **Page Information Card**: Find the "Page Information" section at the top
+3. **Edit Title**: Change the page title in the "Page Title" field
+4. **Edit Slug**: Modify the slug in the "Page Slug" field (auto-generated from title)
+5. **Save Changes**: Click "Save Page" to apply changes
+
+### Page Duplication
+Easily create copies of existing pages:
+
+#### Duplicate Functionality
+- **One-Click Duplication**: Duplicate button in the page list actions
+- **Complete Copy**: Copies all page content, templates, and parameters
+- **Smart Naming**: Automatically names duplicates with "(Copy)" suffix
+- **Unique Slugs**: Ensures duplicate pages have unique, non-conflicting slugs
+- **Draft Status**: All duplicated pages are created as drafts (unpublished)
+
+#### Usage
+1. **Page List**: Go to the Pages section
+2. **Duplicate Button**: Click the "Duplicate" button next to any page
+3. **Confirmation**: Confirm the duplication in the dialog
+4. **Edit Duplicate**: Automatically redirected to edit the new duplicated page
+
+### Drag and Drop Block Reordering
+Enhanced block management with drag and drop:
+
+#### Drag and Drop Features
+- **Visual Drag Handle**: Grip icon for intuitive dragging
+- **Smooth Animations**: 150ms animation for smooth reordering
+- **Visual Feedback**: Ghost effects and scaling during drag operations
+- **Backward Compatibility**: Up/down arrow buttons still work alongside drag and drop
+- **Real-time Updates**: Sort order automatically updated when blocks are reordered
+
+#### Usage
+1. **Grab Handle**: Click and hold the grip icon (⋮⋮) on any block
+2. **Drag**: Move the block to the desired position
+3. **Drop**: Release to place the block in the new position
+4. **Save**: Changes are automatically saved when you submit the form
+
+### CMS Block Indentation System
+Visual organization of page blocks based on CMS tags:
+
+#### Indentation Features
+- **Tag-Based Indentation**: Use `<cms:hero-1>` and `</cms:hero-1>` tags to create visual sections
+- **Nested Support**: Support for multiple levels of nesting
+- **Visual Indicators**: Colored badges show opening (+) and closing (-) tags
+- **Smart Exclusion**: Blocks with tags are not indented themselves (act as section boundaries)
+- **Real-time Updates**: Indentation updates as you edit block captions
+
+#### Usage Examples
+```
+Block 1: "Header <cms:hero-1>"     -> Opens hero-1 section (not indented)
+Block 2: "Content"                 -> Indented 50px (inside hero-1)
+Block 3: "More Content"            -> Indented 50px (inside hero-1)
+Block 4: "Footer </cms:hero-1>"    -> Closes hero-1 section (not indented)
+Block 5: "Normal content"          -> Back to normal level
+```
+
+### Parameter Types System
+Enhanced parameter handling with different input types:
+
+#### Supported Parameter Types
+- **Text (Default)**: Standard textarea for plain text content
+- **Code**: CodeMirror editor with syntax highlighting for HTML/CSS/JS
+- **WYSIWYG**: Enhanced textarea ready for rich text editor integration
+
+#### Usage Examples
+```
+Template Content:
+{{slogan}}                    -> Plain text input (default)
+{{title:code}}                -> Code editor with syntax highlighting
+{{content:wysiwyg}}           -> WYSIWYG editor (enhanced textarea)
+{{description:text}}          -> Plain text input (explicit)
+{{html:code}}                 -> Code editor for HTML content
+{{css:code}}                  -> Code editor for CSS content
+```
+
+#### Features
+- **Type Badges**: Visual indicators show parameter types next to labels
+- **Syntax Highlighting**: Code parameters get full CodeMirror integration
+- **Enhanced Editing**: WYSIWYG parameters have improved styling and min-height
+- **Backward Compatibility**: Existing parameters without types default to plain text
+
 ### JSON Structure
 ```json
 [
@@ -177,10 +283,20 @@ The CMS provides smart management of system template blocks:
 ### Editing Pages
 
 1. From the Pages section, click **"Edit"** on any page
-2. **Template Blocks**: Each page consists of template blocks that can be:
-   - **Sorted**: Use up/down arrows to reorder blocks
+2. **Page Properties**: Edit page title and slug in the "Page Information" section
+3. **Template Blocks**: Each page consists of template blocks that can be:
+   - **Sorted**: Use drag and drop or up/down arrows to reorder blocks
    - **Overridden**: Uncheck "Use default template content" to customize
+   - **Parameter Types**: Different input types for parameters (text, code, wysiwyg)
+   - **CMS Indentation**: Use CMS tags in block captions for visual organization
    - **Saved**: Save changes to preserve custom content
+
+### Duplicating Pages
+
+1. From the Pages section, click **"Duplicate"** next to any page
+2. **Confirmation**: Confirm the duplication in the dialog
+3. **Edit**: Automatically redirected to edit the new duplicated page
+4. **Customize**: Modify the duplicated page as needed
 
 ### Publishing Pages
 
@@ -240,6 +356,29 @@ The following variables are automatically replaced in templates:
 - `{{ section_content }}` - Section content
 - `{{ paragraph_content }}` - Paragraph text
 - `{{ menu_content }}` - Navigation menu content
+
+### Parameter Types
+
+Template parameters can now have different types for enhanced editing:
+
+- `{{ parameter_name }}` - Plain text input (default)
+- `{{ parameter_name:text }}` - Plain text input (explicit)
+- `{{ parameter_name:code }}` - Code editor with syntax highlighting
+- `{{ parameter_name:wysiwyg }}` - WYSIWYG editor (enhanced textarea)
+
+### CMS Block Indentation Tags
+
+Use these tags in block captions to create visual indentation:
+
+- `<cms:section-name>` - Opens a section (blocks after this will be indented)
+- `</cms:section-name>` - Closes a section (returns to previous indentation level)
+
+Example:
+```
+Block 1: "Header <cms:hero>"      -> Opens hero section
+Block 2: "Content"                -> Indented (inside hero)
+Block 3: "Footer </cms:hero>"     -> Closes hero section
+```
 
 ## Security Notes
 
