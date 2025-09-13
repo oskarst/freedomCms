@@ -350,6 +350,60 @@
     color: #495057;
     background-color: #f8f9fa;
 }
+
+/* CMS Block Indentation */
+.template-block.indented {
+    margin-left: 50px;
+    border-left: 3px solid #e9ecef;
+    padding-left: 10px;
+    transition: margin-left 0.3s ease, border-left-color 0.3s ease;
+}
+
+.template-block.indented:hover {
+    border-left-color: #dee2e6;
+}
+
+/* Nested indentation levels */
+.template-block.indent-level-1 { margin-left: 50px; }
+.template-block.indent-level-2 { margin-left: 100px; }
+.template-block.indent-level-3 { margin-left: 150px; }
+.template-block.indent-level-4 { margin-left: 200px; }
+.template-block.indent-level-5 { margin-left: 250px; }
+
+/* Visual indicator for indented blocks */
+.template-block.indented::before {
+    content: '';
+    position: absolute;
+    left: -3px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #e9ecef, #f8f9fa);
+    border-radius: 2px;
+}
+
+/* CMS Tag indicator */
+.cms-tag-indicator {
+    font-size: 0.75rem;
+    color: #6c757d;
+    background-color: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 0.5rem;
+    border: 1px solid #dee2e6;
+}
+
+.cms-tag-indicator.open-tag {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+}
+
+.cms-tag-indicator.close-tag {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
 </style>
 <script>
 // Initialize drag and drop sorting
@@ -365,6 +419,7 @@ function initializeSortable() {
             handle: '.drag-handle',
             onEnd: function(evt) {
                 updateSortOrder();
+                calculateBlockIndentation(); // Recalculate indentation after reordering
             }
         });
     }
@@ -389,6 +444,9 @@ function moveBlock(pageTemplateId, direction) {
 
     // Update sort order inputs
     updateSortOrder();
+    
+    // Recalculate indentation after reordering
+    calculateBlockIndentation();
 }
 
 function updateSortOrder() {
@@ -641,6 +699,112 @@ function reinitializeSortable() {
     initializeSortable();
 }
 
+// CMS Block Indentation System
+// Usage: Add tags like <cms:hero-1> and </cms:hero-1> to block captions
+// Example:
+// Block 1: "Header <cms:hero-1>"     -> Opens hero-1 section
+// Block 2: "Content"                 -> Indented (inside hero-1)
+// Block 3: "Footer </cms:hero-1>"    -> Closes hero-1 section
+// Block 4: "Normal content"          -> Back to normal level
+function parseCMSTags(caption) {
+    if (!caption) return { openTags: [], closeTags: [] };
+    
+    const openTags = [];
+    const closeTags = [];
+    
+    // Find opening tags like <cms:hero-1>
+    const openTagRegex = /<cms:([^>]+)>/g;
+    let match;
+    while ((match = openTagRegex.exec(caption)) !== null) {
+        openTags.push(match[1]);
+    }
+    
+    // Find closing tags like </cms:hero-1>
+    const closeTagRegex = /<\/cms:([^>]+)>/g;
+    while ((match = closeTagRegex.exec(caption)) !== null) {
+        closeTags.push(match[1]);
+    }
+    
+    return { openTags, closeTags };
+}
+
+function calculateBlockIndentation() {
+    const blocks = document.querySelectorAll('.template-block');
+    const indentationStack = [];
+    
+    blocks.forEach((block, index) => {
+        // Remove existing indentation classes and tag indicators
+        block.classList.remove('indented', 'indent-level-1', 'indent-level-2', 'indent-level-3', 'indent-level-4', 'indent-level-5');
+        
+        // Remove existing tag indicators
+        const existingIndicators = block.querySelectorAll('.cms-tag-indicator');
+        existingIndicators.forEach(indicator => indicator.remove());
+        
+        const titleInput = block.querySelector('.editable-title');
+        if (!titleInput) return;
+        
+        const caption = titleInput.value || titleInput.placeholder || '';
+        const { openTags, closeTags } = parseCMSTags(caption);
+        
+        // Add visual indicators for CMS tags
+        const headerDiv = block.querySelector('.d-flex.align-items-center');
+        if (headerDiv) {
+            openTags.forEach(tag => {
+                const indicator = document.createElement('span');
+                indicator.className = 'cms-tag-indicator open-tag';
+                indicator.textContent = `+${tag}`;
+                indicator.title = `Opening tag: <cms:${tag}>`;
+                headerDiv.appendChild(indicator);
+            });
+            
+            closeTags.forEach(tag => {
+                const indicator = document.createElement('span');
+                indicator.className = 'cms-tag-indicator close-tag';
+                indicator.textContent = `-${tag}`;
+                indicator.title = `Closing tag: </cms:${tag}>`;
+                headerDiv.appendChild(indicator);
+            });
+        }
+        
+        // Process opening tags (add to stack)
+        openTags.forEach(tag => {
+            indentationStack.push(tag);
+        });
+        
+        // Apply indentation based on stack depth
+        const indentLevel = indentationStack.length;
+        if (indentLevel > 0) {
+            block.classList.add('indented');
+            if (indentLevel <= 5) {
+                block.classList.add(`indent-level-${indentLevel}`);
+            } else {
+                // For deeper nesting, use CSS custom property
+                block.style.setProperty('--indent-level', indentLevel);
+                block.style.marginLeft = `${indentLevel * 50}px`;
+            }
+        }
+        
+        // Process closing tags (remove from stack)
+        closeTags.forEach(tag => {
+            const tagIndex = indentationStack.lastIndexOf(tag);
+            if (tagIndex !== -1) {
+                indentationStack.splice(tagIndex, 1);
+            }
+        });
+    });
+}
+
+// Apply indentation when page loads
+function initializeIndentation() {
+    calculateBlockIndentation();
+    
+    // Recalculate when title inputs change
+    document.querySelectorAll('.editable-title').forEach(input => {
+        input.addEventListener('input', calculateBlockIndentation);
+        input.addEventListener('blur', calculateBlockIndentation);
+    });
+}
+
 // Validate template selection before adding (for form onsubmit)
 function validateTemplateSelection(form) {
     const templateId = document.getElementById('selectedTemplateId').value;
@@ -761,6 +925,9 @@ function validatePageForm() {
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize drag and drop sorting
     initializeSortable();
+    
+    // Initialize CMS block indentation
+    initializeIndentation();
     
     if (window.CodeMirror) {
         document.querySelectorAll('textarea.code-html').forEach(function(ta) {
