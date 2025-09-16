@@ -90,7 +90,7 @@ def init_db():
         )
     ''')
 
-    # New master tables: page and blog templates (split)
+    # Master table: page templates
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS page_template_defs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,20 +105,7 @@ def init_db():
             default_parameters TEXT DEFAULT '{}'
         )
     ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS blog_template_defs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            slug TEXT UNIQUE NOT NULL,
-            category TEXT NOT NULL,
-            content TEXT,
-            is_default BOOLEAN DEFAULT 1,
-            sort_order INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            default_parameters TEXT DEFAULT '{}'
-        )
-    ''')
+    
 
     # Pages table
     cursor.execute('''
@@ -161,62 +148,7 @@ def init_db():
         )
     ''')
 
-    # Blog categories
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS blog_categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            slug TEXT UNIQUE NOT NULL
-        )
-    ''')
-
-    # Blog posts
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS blog_posts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            slug TEXT UNIQUE NOT NULL,
-            content TEXT,
-            excerpt TEXT,
-            featured_image_url TEXT,
-            featured BOOLEAN DEFAULT 0,
-            published BOOLEAN DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-
-    # Migration: add featured_image_url if missing
-    try:
-        cursor.execute('SELECT featured_image_url FROM blog_posts LIMIT 1')
-    except sqlite3.OperationalError:
-        cursor.execute('ALTER TABLE blog_posts ADD COLUMN featured_image_url TEXT')
-
-    # Blog post categories mapping
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS blog_post_categories (
-            post_id INTEGER NOT NULL,
-            category_id INTEGER NOT NULL,
-            PRIMARY KEY (post_id, category_id),
-            FOREIGN KEY (post_id) REFERENCES blog_posts (id) ON DELETE CASCADE,
-            FOREIGN KEY (category_id) REFERENCES blog_categories (id) ON DELETE CASCADE
-        )
-    ''')
-
-    # Blog post templates mapping (similar to page_templates)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS blog_post_templates (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            post_id INTEGER NOT NULL,
-            template_id INTEGER NOT NULL,
-            custom_content TEXT,
-            use_default BOOLEAN DEFAULT 1,
-            sort_order INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (post_id) REFERENCES blog_posts (id) ON DELETE CASCADE,
-            FOREIGN KEY (template_id) REFERENCES blog_template_defs (id) ON DELETE CASCADE
-        )
-    ''')
+    
 
     # Media library table
     cursor.execute('''
@@ -268,37 +200,13 @@ def init_db():
         ('site_description', 'A simple Flask CMS', 'Site description'),
         ('admin_theme', 'light', 'Admin theme (light/dark)'),
         ('hide_system_blocks', '1', 'Hide system template blocks by default in page editor'),
-        ('blog_posts_per_page', '10', 'Blog posts per page for index pagination'),
         ('media_small_width', '320', 'Media small width (px)'),
         ('media_medium_width', '640', 'Media medium width (px)'),
         ('media_large_width', '1024', 'Media large width (px)'),
-        ('blog_index_base_header_slug', 'base_header', 'Blog index: slug for base header template'),
-        ('blog_index_meta_slug', 'meta', 'Blog index: slug for meta template'),
-        ('blog_index_header_close_slug', 'header_close', 'Blog index: slug for header close template'),
-        ('blog_index_menu_slug', 'menu', 'Blog index: slug for menu template'),
-        ('blog_index_content_slug', 'index_content', 'Blog index: slug for main content template'),
-        ('blog_index_footer_slug', 'footer', 'Blog index: slug for footer template'),
-        ('blog_index_body_close_slug', 'body_close', 'Blog index: slug for body close template'),
     ]
     for key, value, desc in default_settings:
         cursor.execute('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)',
                      (key, value, desc))
-
-    # Migrate legacy blog index slug values with 'blog_' prefix to new slugs
-    legacy_map = {
-        'blog_base_header': 'base_header',
-        'blog_meta': 'meta',
-        'blog_header_close': 'header_close',
-        'blog_menu': 'menu',
-        'blog_index_content': 'index_content',
-        'blog_footer': 'footer',
-        'blog_body_close': 'body_close',
-    }
-    for setting_key in ['blog_index_base_header_slug','blog_index_meta_slug','blog_index_header_close_slug','blog_index_menu_slug','blog_index_content_slug','blog_index_footer_slug','blog_index_body_close_slug']:
-        cursor.execute('SELECT value FROM settings WHERE key = ?', (setting_key,))
-        row = cursor.fetchone()
-        if row and row['value'] and row['value'] in legacy_map:
-            cursor.execute('UPDATE settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?', (legacy_map[row['value']], setting_key))
 
     # Insert default template blocks (Page)
     default_templates = [
@@ -386,27 +294,10 @@ def init_db():
         cursor.execute('INSERT OR IGNORE INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
                      (title, slug, category, content, is_default, sort_order, '{}'))
 
-    # Insert default blog templates
-    blog_templates = [
-        ('Blog Base Header', 'base_header', 'system', '<!DOCTYPE html>\n<html lang="en">\n<head>', 1, 1),
-        ('Blog Meta Tags', 'meta', 'system', '    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Blog</title>', 1, 2),
-        ('Blog Header Close', 'header_close', 'system', '    <!-- Bootstrap CSS -->\n    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">\n    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">\n    <!-- Custom styles for blog pages -->\n    <style>\n        body { padding-top: 20px; }\n        .navbar-brand { font-weight: bold; }\n        .template-block { margin-bottom: 2rem; }\n        section { padding: 3rem 0; }\n    </style>\n</head>\n<body>', 1, 3),
-        ('Blog Menu', 'menu', 'content', '    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">\n        <div class="container">\n            <a class="navbar-brand" href="/blog/index.html">Devall Blog</a>\n            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavBlog">\n                <span class="navbar-toggler-icon"></span>\n            </button>\n            <div class="collapse navbar-collapse" id="navbarNavBlog">\n                <ul class="navbar-nav me-auto">\n                    <li class="nav-item"><a class="nav-link" href="/blog/index.html">Home</a></li>\n                </ul>\n            </div>\n        </div>\n    </nav>', 1, 4),
-        ('Blog Index Content', 'index_content', 'content', '    <div class="container py-4">\n        <div class="row">\n            <div class="col-lg-8">\n                <h1>Latest Blog Posts</h1>\n                {{ posts|safe }}\n            </div>\n            <div class="col-lg-4">\n                <h4>Categories</h4>\n                <ul>\n                    {{ categories|safe }}\n                </ul>\n            </div>\n        </div>\n    </div>', 1, 5),
-        ('Blog Paragraph', 'paragraph', 'content', '    <section class="py-4">\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-10 mx-auto">\n                    <p>{{ title }}</p>\n                    <p>{{ content }}</p>\n                </div>\n            </div>\n        </div>\n    </section>', 1, 6),
-        ('Blog Footer', 'footer', 'content', '    <footer class="bg-dark text-white py-4 mt-5">\n        <div class="container">\n            <div class="row">\n                <div class="col-md-6">\n                    <p>&copy; 2024 Devall Blog. All rights reserved.</p>\n                </div>\n                <div class="col-md-6 text-end">\n                    <p>Powered by <a href="#" class="text-white">Devall CMS</a></p>\n                </div>\n            </div>\n        </div>\n    </footer>', 1, 7),
-        ('Blog Body Close', 'body_close', 'system', '</body>\n</html>', 1, 8),
-    ]
-    for title, slug, category, content, is_default, sort_order in blog_templates:
-        cursor.execute('INSERT OR IGNORE INTO blog_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                     (title, slug, category, content, is_default, sort_order, '{}'))
-
-
-    # Migration: move existing templates rows into split tables and update junctions
+    # Migration: move existing templates rows into page_template_defs and update junctions
     cursor.execute('SELECT id, title, slug, category, content, is_default, sort_order FROM templates')
     legacy = cursor.fetchall()
     old_to_new_page = {}
-    old_to_new_blog = {}
     for row in legacy:
         tid = row['id']
         title = row['title']
@@ -416,24 +307,16 @@ def init_db():
         is_default = row['is_default']
         sort_order = row['sort_order']
         if slug.startswith('blog_'):
-            new_slug = slug[5:] or slug
-            cursor.execute('INSERT OR IGNORE INTO blog_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                           (title, new_slug, category, content, is_default, sort_order, '{}'))
-            cursor.execute('SELECT id FROM blog_template_defs WHERE slug = ?', (new_slug,))
-            new_id = cursor.fetchone()['id']
-            old_to_new_blog[tid] = new_id
-        else:
-            new_slug = slug
-            cursor.execute('INSERT OR IGNORE INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                           (title, new_slug, category, content, is_default, sort_order, '{}'))
-            cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (new_slug,))
-            new_id = cursor.fetchone()['id']
-            old_to_new_page[tid] = new_id
+            continue
+        new_slug = slug
+        cursor.execute('INSERT OR IGNORE INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                       (title, new_slug, category, content, is_default, sort_order, '{}'))
+        cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (new_slug,))
+        new_id = cursor.fetchone()['id']
+        old_to_new_page[tid] = new_id
 
     # Update junction tables to point to new ids
     for old_id, new_id in old_to_new_page.items():
         cursor.execute('UPDATE page_templates SET template_id = ? WHERE template_id = ?', (new_id, old_id))
-    for old_id, new_id in old_to_new_blog.items():
-        cursor.execute('UPDATE blog_post_templates SET template_id = ? WHERE template_id = ?', (new_id, old_id))
 
     db.commit()

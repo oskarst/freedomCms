@@ -60,14 +60,7 @@
                             <div class="form-text">URL-friendly identifier for the template</div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="template_type" class="form-label">Template Type *</label>
-                            <select class="form-select" id="template_type" name="template_type" required disabled>
-                                <option value="page" {{ 'selected' if not template.slug.startswith('blog_') else '' }}>Page</option>
-                                <option value="blog" {{ 'selected' if template.slug.startswith('blog_') else '' }}>Blog</option>
-                            </select>
-                            <div class="form-text">Type is derived from the slug for existing template blocks.</div>
-                        </div>
+                        
 
                         <div class="mb-3">
                             <label for="category" class="form-label">Category *</label>

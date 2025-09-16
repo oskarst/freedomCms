@@ -13,7 +13,7 @@
   <h3 class="mt-4">Templates Overview</h3>
   <p>Templates are reusable HTML blocks stored in the database. They can be:</p>
   <ul>
-    <li><strong>System</strong>: page or blog structure (head, meta, header close/body open, body close)</li>
+    <li><strong>System</strong>: page structure (head, meta, header close/body open, body close)</li>
     <li><strong>Content</strong>: visible content sections (hero, menu, section, paragraph, etc.)</li>
   </ul>
 
@@ -47,58 +47,12 @@
     <li><strong>Block indentation</strong> can be controlled using CMS tags in block captions</li>
   </ul>
 
-  <h3 class="mt-4">Blog Templates</h3>
-  <ul>
-    <li>New blog posts get all <strong>default</strong> blog templates (slugs starting with <code>blog_</code>).</li>
-    <li>On Add and Edit Post, you can reorder blocks and override content per-post.</li>
-    <li>Blog publishing renders post blocks with variables available in content template blocks.</li>
-  </ul>
-
-  <h3 class="mt-4">Variables in Blog Templates</h3>
-  <p>In blog post blocks, you can use:</p>
-  <ul>
-    <li><code>{{ "{{ title }}" }}</code>: post title</li>
-    <li><code>{{ "{{ content }}" }}</code>: post content (HTML from editor)</li>
-    <li><code>{{ "{{ excerpt }}" }}</code>: post excerpt</li>
-    <li><code>{{ "{{ featured_image_url }}" }}</code>: URL for featured image</li>
-  </ul>
-
-  <h3 class="mt-4">Blog Index Templates</h3>
-  <p>The Blog Index is generated using these templates (in order):</p>
-  <ol>
-    <li>Base header (<code>blog_base_header</code> by default)</li>
-    <li>Meta (<code>blog_meta</code> by default)</li>
-    <li>Header close/body open (<code>blog_header_close</code> by default)</li>
-    <li>Menu (<code>blog_menu</code> by default)</li>
-    <li>Index content (<code>blog_index_content</code> by default) — receives variables:</li>
-  </ol>
-  <ul>
-    <li><code>{{ "{{ posts }}" }}</code> — HTML list of post items</li>
-    <li><code>{{ "{{ categories }}" }}</code> — HTML list of categories</li>
-  </ul>
-  <ol start="6">
-    <li>Footer (<code>blog_footer</code> by default)</li>
-    <li>Body close (<code>blog_body_close</code> by default)</li>
-  </ol>
-
-  <h4 class="mt-3">Customizing the Blog Index Template Slugs</h4>
-  <p>You can change which template slugs are used for the index via Settings:</p>
-  <ul>
-    <li><code>blog_index_base_header_slug</code></li>
-    <li><code>blog_index_meta_slug</code></li>
-    <li><code>blog_index_header_close_slug</code></li>
-    <li><code>blog_index_menu_slug</code></li>
-    <li><code>blog_index_content_slug</code></li>
-    <li><code>blog_index_footer_slug</code></li>
-    <li><code>blog_index_body_close_slug</code></li>
-  </ul>
-  <p>If a slug is empty or missing, the default listed above is used. The index content template receives only two variables: <code>{{ "{{ posts }}" }}</code> and <code>{{ "{{ categories }}" }}</code>.</p>
 
   <h3 class="mt-4">Template Order</h3>
   <ul>
     <li>Templates tab lists all templates; you can reorder default order.</li>
     <li>Reordering templates changes defaults. You may optionally reorder existing pages’ blocks to match.</li>
-    <li>Page and blog editors also allow per-item ordering that overrides defaults.</li>
+    <li>Page editor also allows per-item ordering that overrides defaults.</li>
   </ul>
 
   <h3 class="mt-4">Overrides and Defaults</h3>
