@@ -111,6 +111,57 @@ def edit_template_group(group_id: int):
             db.commit()
             flash('Block removed from template', 'success')
             return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+        elif action == 'create_block':
+            # Create a new template block and add it to this group
+            title = request.form.get('title', '').strip()
+            slug_input = request.form.get('slug', '').strip()
+            category = request.form.get('category', 'content')
+            content = request.form.get('content', '').strip()
+            is_default = request.form.get('is_default') == 'on'
+            default_parameters = request.form.get('default_parameters', '{}').strip()
+
+            if not title or not content:
+                flash('Title and content are required for new block', 'error')
+                return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+
+            if not slug_input:
+                slug_input = slugify(title)
+
+            # Ensure unique slug
+            cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (slug_input,))
+            if cursor.fetchone():
+                flash('A template block with this slug already exists', 'error')
+                return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+
+            # Determine sort order for block definitions
+            cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM page_template_defs')
+            max_order = cursor.fetchone()[0] or 0
+
+            # Insert block definition
+            cursor.execute('''
+                INSERT INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (title, slug_input, category, content, is_default, max_order + 1, default_parameters))
+
+            new_block_id = cursor.lastrowid
+
+            # If default, add to all existing pages
+            if is_default:
+                cursor.execute('SELECT id FROM pages')
+                rows = cursor.fetchall()
+                for page in rows:
+                    cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM page_templates WHERE page_id = ?', (page['id'],))
+                    mo = cursor.fetchone()[0] or 0
+                    cursor.execute('INSERT INTO page_templates (page_id, template_id, sort_order) VALUES (?, ?, ?)', (page['id'], new_block_id, mo + 1))
+
+            # Add new block into this group at the end
+            cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM template_group_blocks WHERE group_id = ?', (group_id,))
+            next_order = (cursor.fetchone()[0] or 0) + 1
+            cursor.execute('INSERT INTO template_group_blocks (group_id, template_id, sort_order) VALUES (?, ?, ?)', (group_id, new_block_id, next_order))
+
+            db.commit()
+            flash('New block created and added to template', 'success')
+            return redirect(url_for('templates_.edit_template_group', group_id=group_id))
         elif action in ('move_up', 'move_down'):
             membership_id = request.form.get('membership_id', type=int)
             # Get current
@@ -140,10 +191,19 @@ def edit_template_group(group_id: int):
 
     # Load available blocks and membership
     cursor.execute('''
-        SELECT tgb.id as membership_id, tgb.sort_order, d.id as template_id, d.title, d.slug, d.category
+        SELECT 
+            tgb.id as membership_id,
+            tgb.sort_order,
+            d.id as template_id,
+            d.title,
+            d.slug,
+            d.category,
+            COALESCE(SUM(CASE WHEN pt.use_default = 0 THEN 1 END), 0) AS override_count
         FROM template_group_blocks tgb
         JOIN page_template_defs d ON d.id = tgb.template_id
+        LEFT JOIN page_templates pt ON pt.template_id = d.id
         WHERE tgb.group_id = ?
+        GROUP BY tgb.id
         ORDER BY tgb.sort_order
     ''', (group_id,))
     group_blocks = cursor.fetchall()
@@ -432,6 +492,9 @@ def edit_template(template_id):
 
         db.commit()
 
+        # Optional redirect back path
+        next_url = request.args.get('next') or request.form.get('next')
+
         # Republish all published pages that use this template
         republished_count = 0
         cursor.execute('''
@@ -455,6 +518,8 @@ def edit_template(template_id):
         flash('Template updated successfully', 'success')
         if republished_count:
             flash(f'Republished {republished_count} page(s) using this template', 'info')
+        if next_url:
+            return redirect(next_url)
         return redirect(url_for('templates_.templates'))
 
     return render_template('templates/edit.html', template=template, overriding_pages=overriding_pages)
