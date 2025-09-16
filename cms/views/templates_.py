@@ -115,10 +115,42 @@ def edit_template_group(group_id: int):
             return redirect(url_for('templates_.edit_template_group', group_id=group_id))
         elif action == 'add_block':
             template_id = request.form.get('template_id', type=int)
+            duplicate = request.form.get('duplicate') == 'on'
             if not template_id:
                 flash('Select a block to add', 'error')
                 return redirect(url_for('templates_.edit_template_group', group_id=group_id))
-            # Determine next sort order
+
+            # If duplicate checked, create a new block definition copied from selected
+            if duplicate:
+                cursor.execute('SELECT title, slug, category, content, default_parameters FROM page_template_defs WHERE id = ?', (template_id,))
+                src = cursor.fetchone()
+                if not src:
+                    flash('Selected block not found', 'error')
+                    return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+
+                # Generate a unique slug: original-slug-copy[-n]
+                base_slug = (src['slug'] or 'block') + '-copy'
+                new_slug = base_slug
+                counter = 1
+                while True:
+                    cursor.execute('SELECT 1 FROM page_template_defs WHERE slug = ?', (new_slug,))
+                    if not cursor.fetchone():
+                        break
+                    counter += 1
+                    new_slug = f"{base_slug}-{counter}"
+
+                new_title = f"{src['title']} (Copy)"
+                # Determine global sort order for defs
+                cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM page_template_defs')
+                max_order = cursor.fetchone()[0] or 0
+
+                cursor.execute('''
+                    INSERT INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters)
+                    VALUES (?, ?, ?, ?, 0, ?, ?)
+                ''', (new_title, new_slug, src['category'], src['content'], max_order + 1, src['default_parameters'] or '{}'))
+                template_id = cursor.lastrowid
+
+            # Determine next sort order within this group
             cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM template_group_blocks WHERE group_id = ?', (group_id,))
             next_order = (cursor.fetchone()[0] or 0) + 1
             cursor.execute('INSERT INTO template_group_blocks (group_id, template_id, sort_order) VALUES (?, ?, ?)',
@@ -229,7 +261,7 @@ def edit_template_group(group_id: int):
     ''', (group_id,))
     group_blocks = cursor.fetchall()
 
-    cursor.execute('SELECT id, title, slug FROM page_template_defs ORDER BY category, sort_order')
+    cursor.execute('SELECT id, title, slug, category, sort_order FROM page_template_defs ORDER BY sort_order, title')
     all_blocks = cursor.fetchall()
 
     return render_template('templates/group_edit.html', group=group, group_blocks=group_blocks, all_blocks=all_blocks)
