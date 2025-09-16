@@ -50,6 +50,119 @@ def templates():
     groups = cursor.fetchall()
     return render_template('templates/templates.html', groups=groups)
 
+@bp.route('/templates/blocks')
+@login_required
+@admin_required
+def blocks():
+    """List all template blocks with global order management"""
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('''
+        SELECT d.*, COUNT(CASE WHEN pt.use_default = 0 THEN 1 END) as override_count
+        FROM page_template_defs d
+        LEFT JOIN page_templates pt ON d.id = pt.template_id
+        GROUP BY d.id
+        ORDER BY d.sort_order
+    ''')
+    blocks_list = cursor.fetchall()
+    return render_template('templates/blocks.html', blocks=blocks_list)
+
+@bp.route('/templates/blocks/<int:template_id>/move/<direction>', methods=['POST'])
+@login_required
+@admin_required
+def move_block(template_id: int, direction: str):
+    """Move a template block up or down in global order"""
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('SELECT id, sort_order FROM page_template_defs WHERE id = ?', (template_id,))
+    current = cursor.fetchone()
+    if not current:
+        flash('Template block not found', 'error')
+        return redirect(url_for('templates_.blocks'))
+
+    if direction == 'up':
+        cursor.execute('SELECT id, sort_order FROM page_template_defs WHERE sort_order < ? ORDER BY sort_order DESC LIMIT 1', (current['sort_order'],))
+        neighbor = cursor.fetchone()
+    else:
+        cursor.execute('SELECT id, sort_order FROM page_template_defs WHERE sort_order > ? ORDER BY sort_order ASC LIMIT 1', (current['sort_order'],))
+        neighbor = cursor.fetchone()
+
+    if neighbor:
+        cursor.execute('UPDATE page_template_defs SET sort_order = ? WHERE id = ?', (neighbor['sort_order'], current['id']))
+        cursor.execute('UPDATE page_template_defs SET sort_order = ? WHERE id = ?', (current['sort_order'], neighbor['id']))
+        db.commit()
+        flash('Block order updated', 'success')
+    else:
+        flash('Cannot move further', 'warning')
+    return redirect(url_for('templates_.blocks'))
+
+@bp.route('/templates/blocks/<int:template_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_block(template_id: int):
+    """Delete a template block definition"""
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('SELECT title FROM page_template_defs WHERE id = ?', (template_id,))
+    row = cursor.fetchone()
+    if not row:
+        flash('Template block not found', 'error')
+        return redirect(url_for('templates_.blocks'))
+    cursor.execute('DELETE FROM page_template_defs WHERE id = ?', (template_id,))
+    db.commit()
+    flash(f'Template block "{row["title"]}" deleted', 'success')
+    return redirect(url_for('templates_.blocks'))
+
+@bp.route('/templates/blocks/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_template():
+    """Add new template block (global)"""
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        category = request.form.get('category', 'content')
+        content = request.form.get('content', '').strip()
+        slug_input = request.form.get('slug', '').strip()
+        is_default = request.form.get('is_default') == 'on'
+        default_parameters = request.form.get('default_parameters', '{}').strip()
+
+        if not title or not content:
+            flash('Title and content are required', 'error')
+            return redirect(url_for('templates_.add_template'))
+
+        if not slug_input:
+            slug_input = slugify(title)
+
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (slug_input,))
+        if cursor.fetchone():
+            flash('Template with this slug already exists', 'error')
+            return redirect(url_for('templates_.add_template'))
+
+        cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM page_template_defs')
+        max_order = cursor.fetchone()[0] or 0
+        cursor.execute('''
+            INSERT INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (title, slug_input, category, content, is_default, max_order + 1, default_parameters))
+
+        if is_default:
+            template_id = cursor.lastrowid
+            cursor.execute('SELECT id FROM pages')
+            rows = cursor.fetchall()
+            for page in rows:
+                cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM page_templates WHERE page_id = ?', (page['id'],))
+                mo = cursor.fetchone()[0] or 0
+                cursor.execute('INSERT INTO page_templates (page_id, template_id, sort_order) VALUES (?, ?, ?)', (page['id'], template_id, mo + 1))
+
+        db.commit()
+        flash('Template block created successfully', 'success')
+        next_url = request.args.get('next') or request.form.get('next')
+        return redirect(next_url or url_for('templates_.blocks'))
+
+    return render_template('templates/add.html')
+
 @bp.route('/templates/groups/add', methods=['GET', 'POST'])
 @login_required
 @admin_required

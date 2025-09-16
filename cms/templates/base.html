@@ -28,7 +28,15 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link{% if request.endpoint == 'dashboard' %} active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link{% if 'pages' in request.endpoint %} active{% endif %}" href="{{ url_for('pages.pages') }}">Pages</a></li>
-                    <li class="nav-item"><a class="nav-link{% if 'templates' in request.endpoint %} active{% endif %}" href="{{ url_for('templates_.templates') }}">Templates</a></li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle{% if 'templates' in request.endpoint %} active{% endif %}" href="#" id="templatesDropdown" role="button" data-bs-toggle="dropdown">
+                            Templates
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('templates_.templates') }}">Templates</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('templates_.blocks') }}">Template Blocks</a></li>
+                        </ul>
+                    </li>
                     <li class="nav-item"><a class="nav-link{% if 'users' in request.endpoint %} active{% endif %}" href="{{ url_for('users.users') }}">Users</a></li>
                     <li class="nav-item"><a class="nav-link{% if 'settings' in request.endpoint %} active{% endif %}" href="{{ url_for('settings.settings') }}">Settings</a></li>
                     <li class="nav-item"><a class="nav-link{% if 'media.' in request.endpoint %} active{% endif %}" href="{{ url_for('media.media_list') }}">Media</a></li>
