@@ -5,6 +5,7 @@ Pages blueprint for Devall CMS
 
 import json
 import re
+import sqlite3
 from flask import Blueprint, request, redirect, url_for, render_template, flash, session
 from ..auth import login_required
 from ..db import get_db
@@ -100,6 +101,62 @@ def pages():
     if request.method == 'POST':
         action = request.form.get('action')
 
+        if action == 'add_category' and (request.args.get('type') or 'page') == 'blog':
+            # Add a new blog category
+            title = (request.form.get('new_category') or '').strip()
+            if title:
+                base_slug = slugify(title) or 'category'
+                # Ensure unique slug by appending -2, -3, ... if needed
+                slug = base_slug
+                attempt = 2
+                # Determine next sort order
+                cursor.execute('SELECT COALESCE(MAX(sort_order), 0) AS maxo FROM blog_categories')
+                next_order = (cursor.fetchone()['maxo'] or 0) + 1
+                # Try insert, handle unique slug race by retrying with incremented suffix
+                while True:
+                    try:
+                        # Primary insert using (title, slug, sort_order)
+                        cursor.execute('INSERT INTO blog_categories (title, slug, sort_order) VALUES (?, ?, ?)', (title or slug, slug, next_order))
+                        db.commit()
+                        flash('Category added', 'success')
+                        break
+                    except sqlite3.IntegrityError as e:
+                        msg = str(e)
+                        # If slug unique constraint, increment and retry
+                        if 'UNIQUE' in msg and 'slug' in msg:
+                            slug = f"{base_slug}-{attempt}"
+                            attempt += 1
+                            continue
+                        # If legacy schema requires name NOT NULL, insert including name column
+                        if 'NOT NULL' in msg and 'blog_categories.name' in msg:
+                            try:
+                                cursor.execute('INSERT INTO blog_categories (name, title, slug, sort_order) VALUES (?, ?, ?, ?)', (title or slug, title or slug, slug, next_order))
+                                db.commit()
+                                flash('Category added', 'success')
+                                break
+                            except Exception as e2:
+                                db.rollback()
+                                flash(f'Failed to add category: {str(e2)}', 'error')
+                                break
+                        db.rollback()
+                        flash(f'Failed to add category: {msg}', 'error')
+                        break
+                    except Exception as e:
+                        db.rollback()
+                        flash(f'Failed to add category: {str(e)}', 'error')
+                        break
+            return redirect(url_for('pages.pages', type='blog'))
+        if action == 'delete_category' and (request.args.get('type') or 'page') == 'blog':
+            try:
+                category_id = int(request.form.get('category_id'))
+                # Remove mappings first to ensure clean delete regardless of FK settings
+                cursor.execute('DELETE FROM page_blog_categories WHERE category_id = ?', (category_id,))
+                cursor.execute('DELETE FROM blog_categories WHERE id = ?', (category_id,))
+                db.commit()
+                flash('Category deleted', 'success')
+            except Exception:
+                flash('Failed to delete category', 'error')
+            return redirect(url_for('pages.pages', type='blog'))
         if action == 'import':
             import_file = request.files.get('import_file')
             overwrite_existing = request.form.get('overwrite_existing') == 'on'
@@ -118,27 +175,44 @@ def pages():
 
             return redirect(url_for('pages.pages'))
 
-    cursor.execute('''
-        SELECT p.*, g.title AS template_group_title
-        FROM pages p
-        LEFT JOIN template_groups g ON g.id = p.template_group_id
-        ORDER BY p.created_at DESC
-    ''')
+    # Filter by page type (defaults to 'page' when absent)
+    page_type = request.args.get('type') or 'page'
+    if page_type == 'blog':
+        cursor.execute('''
+            SELECT p.*, g.title AS template_group_title
+            FROM pages p
+            LEFT JOIN template_groups g ON g.id = p.template_group_id
+            WHERE p.type = ?
+            ORDER BY p.created_at DESC
+        ''', (page_type,))
+        # Load blog categories for management UI
+        cursor.execute("SELECT id, COALESCE(NULLIF(title, ''), slug) as title, slug, sort_order FROM blog_categories ORDER BY sort_order, title")
+        blog_categories = cursor.fetchall()
+    else:
+        cursor.execute('''
+            SELECT p.*, g.title AS template_group_title
+            FROM pages p
+            LEFT JOIN template_groups g ON g.id = p.template_group_id
+            WHERE p.type = 'page'
+            ORDER BY p.created_at DESC
+        ''')
+        blog_categories = []
     pages_list = cursor.fetchall()
 
-    return render_template('pages/pages.html', pages=pages_list)
+    return render_template('pages/pages.html', pages=pages_list, page_type=page_type, blog_categories=blog_categories)
 
 @bp.route('/pages/export')
 @login_required
 def export_pages():
-    """Export all pages to JSON"""
+    """Export all pages to JSON (optionally filtered by type)"""
     db = get_db()
     cursor = db.cursor()
+    page_type = request.args.get('type')
 
     # Get all pages with their templates
-    cursor.execute('''
+    base_query = '''
         SELECT
-            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at, p.template_group_id,
+            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at, p.template_group_id, p.type,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
             t.title as template_title, t.slug as template_slug, t.category, t.default_parameters,
             tg.title as template_group_title
@@ -146,8 +220,11 @@ def export_pages():
         LEFT JOIN page_templates pt ON p.id = pt.page_id
         LEFT JOIN page_template_defs t ON pt.template_id = t.id
         LEFT JOIN template_groups tg ON p.template_group_id = tg.id
-        ORDER BY p.id, pt.sort_order
-    ''')
+    '''
+    if page_type:
+        cursor.execute(base_query + ' WHERE p.type = ? ORDER BY p.id, pt.sort_order', (page_type,))
+    else:
+        cursor.execute(base_query + ' ORDER BY p.id, pt.sort_order')
 
     rows = cursor.fetchall()
 
@@ -202,7 +279,8 @@ def export_pages():
         status=200,
         mimetype='application/json'
     )
-    response.headers['Content-Disposition'] = 'attachment; filename=pages_export.json'
+    filename = f"pages_export_{page_type}.json" if page_type else 'pages_export.json'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     return response
 
 @bp.route('/pages/export/selected', methods=['POST'])
@@ -402,6 +480,7 @@ def add_page():
     """Add new page"""
     db = get_db()
     cursor = db.cursor()
+    default_type = request.args.get('type') or 'page'
 
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
@@ -423,7 +502,7 @@ def add_page():
             return redirect(url_for('pages.add_page'))
 
         # Insert new page
-        cursor.execute('INSERT INTO pages (title, slug, mode, template_group_id) VALUES (?, ?, ?, ?)', (title, slug_input, 'simple', template_group_id))
+        cursor.execute('INSERT INTO pages (title, slug, mode, template_group_id, type) VALUES (?, ?, ?, ?, ?)', (title, slug_input, 'simple', template_group_id, default_type if default_type in ('page', 'blog') else 'page'))
         page_id = cursor.lastrowid
 
         # If a template group was selected, add its blocks to the page
@@ -501,7 +580,7 @@ def add_page():
     cursor.execute('SELECT id, title FROM template_groups ORDER BY title')
     template_groups = cursor.fetchall()
 
-    return render_template('pages/add.html', template_groups=template_groups)
+    return render_template('pages/add.html', template_groups=template_groups, page_type=default_type)
 
 @bp.route('/pages/<int:page_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -534,6 +613,10 @@ def edit_page(page_id):
             # Update page title and slug
             page_title = request.form.get('page_title', '').strip()
             page_slug = request.form.get('page_slug', '').strip()
+            # Blog container flag
+            is_blog_container = 1 if request.form.get('is_blog_container') == 'on' else 0
+            # Excerpt (blog only)
+            page_excerpt = request.form.get('page_excerpt', '').strip()
             
             if not page_title:
                 flash('Page title is required', 'error')
@@ -549,9 +632,9 @@ def edit_page(page_id):
                 flash('Page with this slug already exists', 'error')
                 return redirect(url_for('pages.edit_page', page_id=page_id))
             
-            # Update page title and slug
-            cursor.execute('UPDATE pages SET title = ?, slug = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
-                         (page_title, page_slug, page_id))
+            # Update page title, slug, blog container flag, and excerpt (excerpt used for blogs)
+            cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+                         (page_title, page_slug, is_blog_container, page_excerpt, page_id))
             
             # Update page templates
             cursor.execute('SELECT pt.id, pt.template_id, pt.use_default, pt.sort_order FROM page_templates pt WHERE pt.page_id = ? ORDER BY pt.sort_order', (page_id,))
@@ -617,6 +700,17 @@ def edit_page(page_id):
                         param_value = request.form.get(param_key, '')
                         parameters[param_info["name"]] = param_value
                     save_template_parameters(db, pt['id'], parameters)
+
+            # If blog page, save categories mapping
+            current_page_type = page['type'] if 'type' in page.keys() else 'page'
+            if current_page_type == 'blog':
+                cursor.execute('DELETE FROM page_blog_categories WHERE page_id = ?', (page_id,))
+                selected = request.form.getlist('category_ids')
+                for cid in selected:
+                    try:
+                        cursor.execute('INSERT INTO page_blog_categories (page_id, category_id) VALUES (?, ?)', (page_id, int(cid)))
+                    except Exception:
+                        continue
 
             db.commit()
             flash('Page saved successfully', 'success')
@@ -744,7 +838,17 @@ def edit_page(page_id):
     grp = cursor.fetchone()
     page_template_label = grp['title'] if grp else None
 
-    return render_template('pages/edit.html', page=page, page_templates=page_templates, available_templates=available_templates, page_template_label=page_template_label)
+    # If blog page, load categories and selected
+    blog_categories = []
+    selected_categories = []
+    current_page_type = page['type'] if 'type' in page.keys() else 'page'
+    if current_page_type == 'blog':
+        cursor.execute("SELECT id, COALESCE(NULLIF(title, ''), slug) as title FROM blog_categories ORDER BY sort_order, title")
+        blog_categories = cursor.fetchall()
+        cursor.execute('SELECT category_id FROM page_blog_categories WHERE page_id = ?', (page_id,))
+        selected_categories = [row['category_id'] for row in cursor.fetchall()]
+
+    return render_template('pages/edit.html', page=page, page_templates=page_templates, available_templates=available_templates, page_template_label=page_template_label, blog_categories=blog_categories, selected_categories=selected_categories)
 
 @bp.route('/pages/<int:page_id>/delete', methods=['POST'])
 @login_required
@@ -926,12 +1030,16 @@ def publish_page(page_id):
 @bp.route('/pages/republish-all', methods=['POST'])
 @login_required
 def republish_all_pages():
-    """Re-publish all pages to update them with latest template changes"""
+    """Re-publish all pages to update them with latest template changes (optionally filtered by type)"""
     db = get_db()
     cursor = db.cursor()
+    page_type = request.args.get('type')
     
     # Get all published pages
-    cursor.execute('SELECT id, title, slug FROM pages WHERE published = 1')
+    if page_type:
+        cursor.execute('SELECT id, title, slug FROM pages WHERE published = 1 AND type = ?', (page_type,))
+    else:
+        cursor.execute('SELECT id, title, slug FROM pages WHERE published = 1')
     published_pages = cursor.fetchall()
     
     if not published_pages:
@@ -952,6 +1060,7 @@ def republish_all_pages():
     if errors:
         flash(f'Republished {republished_count} pages. Errors: {"; ".join(errors)}', 'warning')
     else:
-        flash(f'Successfully republished {republished_count} pages', 'success')
+        label = 'blogs' if page_type == 'blog' else 'pages'
+        flash(f'Successfully republished {republished_count} {label}', 'success')
     
     return redirect(url_for('pages.pages'))

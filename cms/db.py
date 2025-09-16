@@ -126,6 +126,24 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add type to pages if missing ('page' | 'blog')
+    try:
+        cursor.execute("ALTER TABLE pages ADD COLUMN type TEXT DEFAULT 'page'")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Add is_blog_container to pages if missing
+    try:
+        cursor.execute('ALTER TABLE pages ADD COLUMN is_blog_container BOOLEAN DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Add excerpt to pages if missing (used for blog type pages)
+    try:
+        cursor.execute('ALTER TABLE pages ADD COLUMN excerpt TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Page templates junction table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS page_templates (
@@ -177,6 +195,28 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (group_id) REFERENCES template_groups (id) ON DELETE CASCADE,
             FOREIGN KEY (template_id) REFERENCES page_template_defs (id) ON DELETE CASCADE
+        )
+    ''')
+
+    # Blog categories (used only for pages with type='blog')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS blog_categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Page to blog category mapping (many-to-many)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS page_blog_categories (
+            page_id INTEGER NOT NULL,
+            category_id INTEGER NOT NULL,
+            PRIMARY KEY (page_id, category_id),
+            FOREIGN KEY (page_id) REFERENCES pages (id) ON DELETE CASCADE,
+            FOREIGN KEY (category_id) REFERENCES blog_categories (id) ON DELETE CASCADE
         )
     ''')
 

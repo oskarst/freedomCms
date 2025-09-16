@@ -90,6 +90,49 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check" {% if page.type == 'blog' %}style="display:none;"{% endif %}>
+                                    <input class="form-check-input" type="checkbox" id="is_blog_container" name="is_blog_container" {% if page.is_blog_container %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_blog_container">
+                                        Used for Blog
+                                    </label>
+                                    <div class="form-text">Mark this page as the blog listing/container. Hidden for Blog type pages.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-center justify-content-end">
+                                <span class="badge bg-secondary">Type: {{ (page.type or 'page')|title }}</span>
+                            </div>
+                        </div>
+                        {% if page.type == 'blog' %}
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="page_excerpt" class="form-label fw-bold">Excerpt</label>
+                                    <textarea class="form-control" id="page_excerpt" name="page_excerpt" rows="3" placeholder="Short summary for listings">{{ page.excerpt or '' }}</textarea>
+                                    <div class="form-text">Optional short summary used in blog listings and previews.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Categories</label>
+                                    <div>
+                                        {% for cat in blog_categories %}
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="cat_{{ cat.id }}" name="category_ids" value="{{ cat.id }}" {% if cat.id in selected_categories %}checked{% endif %}>
+                                            <label class="form-check-label" for="cat_{{ cat.id }}">{{ cat.title }}</label>
+                                        </div>
+                                        {% endfor %}
+                                        {% if not blog_categories %}
+                                            <div class="text-muted">No categories yet. Add some from the Blog list page.</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

@@ -6,32 +6,31 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Pages</h1>
+                <h1>{{ 'Blog Articles' if page_type == 'blog' else 'Pages' }}</h1>
                 <div class="d-flex gap-2">
+                    <div class="btn-group" role="group" aria-label="Section">
+                        <a href="{{ url_for('pages.pages', type='page') }}" class="btn btn-outline-secondary{% if page_type != 'blog' %} active{% endif %}">Pages</a>
+                        <a href="{{ url_for('pages.pages', type='blog') }}" class="btn btn-outline-secondary{% if page_type == 'blog' %} active{% endif %}">Blog</a>
+                    </div>
                     <form method="post" action="{{ url_for('pages.export_selected_pages') }}" id="exportSelectedForm" style="display: none;">
                         <input type="hidden" name="action" value="export_selected">
                     </form>
                     <button type="button" id="exportSelectedBtn" class="btn btn-success" style="display: none;">
                         <i class="bi bi-download"></i> Export Selected
                     </button>
-                    <a href="{{ url_for('pages.export_pages') }}" class="btn btn-outline-success">
-                        <i class="bi bi-download"></i> Export All
+                    <a href="{{ url_for('pages.export_pages', type=page_type) }}" class="btn btn-outline-success">
+                        <i class="bi bi-download"></i> {{ 'Export All Blogs' if page_type == 'blog' else 'Export All' }}
                     </a>
                     <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#importModal">
                         <i class="bi bi-upload"></i> Import
                     </button>
-                    <form method="post" action="{{ url_for('pages.republish_all_pages') }}" class="d-inline" onsubmit="return confirm('This will republish all pages. Are you sure?')">
+                    <form method="post" action="{{ (url_for('pages.republish_all_pages', type=page_type) if page_type else url_for('pages.republish_all_pages')) }}" class="d-inline" onsubmit="return confirm('{{ 'This will republish all blogs. Are you sure?' if page_type == 'blog' else 'This will republish all pages. Are you sure?' }}')">
                         <button type="submit" class="btn btn-warning">
-                            <i class="bi bi-arrow-clockwise"></i> Re-publish All Pages
+                            <i class="bi bi-arrow-clockwise"></i> {{ 'Re-publish All Blogs' if page_type == 'blog' else 'Re-publish All Pages' }}
                         </button>
                     </form>
-                    <form method="post" action="{{ url_for('pages.delete_all_pages') }}" class="d-inline" onsubmit="return confirm('WARNING: This will permanently delete ALL pages and cannot be undone. Are you absolutely sure?')">
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-trash"></i> Delete All Pages
-                        </button>
-                    </form>
-                    <a href="{{ url_for('pages.add_page') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add Page
+                    <a href="{{ url_for('pages.add_page', type=page_type) }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> {{ 'Add Blog' if page_type == 'blog' else 'Add Page' }}
                     </a>
                 </div>
             </div>
@@ -42,6 +41,37 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-body">
+                    {% if page_type == 'blog' %}
+                    <div class="mb-3 p-3 border rounded bg-light">
+                        <form class="row g-2" method="post" action="{{ url_for('pages.pages', type='blog') }}">
+                            <div class="col-auto">
+                                <label class="col-form-label fw-bold">Categories</label>
+                            </div>
+                            <div class="col-auto">
+                                <input type="text" class="form-control" name="new_category" placeholder="New category title">
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" name="action" value="add_category" class="btn btn-sm btn-outline-primary">Add</button>
+                            </div>
+                        </form>
+                        <div class="mt-2 small">
+                            {% if blog_categories %}
+                                {% for cat in blog_categories %}
+                                    <span class="badge bg-secondary me-1">
+                                        {{ cat.title }}
+                                        <form method="post" action="{{ url_for('pages.pages', type='blog') }}" style="display:inline">
+                                            <input type="hidden" name="action" value="delete_category">
+                                            <input type="hidden" name="category_id" value="{{ cat.id }}">
+                                            <button type="submit" class="btn btn-sm btn-light ms-1 p-0 px-1">x</button>
+                                        </form>
+                                    </span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">No categories yet.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead>
