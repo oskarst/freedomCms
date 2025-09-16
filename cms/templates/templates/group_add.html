@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% set title = "Add Template" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Add Template</h1>
+                <a href="{{ url_for('templates_.templates') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Templates
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Template Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Template Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="slug" class="form-label">Template Slug</label>
+                            <input type="text" class="form-control" id="slug" name="slug" placeholder="auto-generated">
+                            <div class="form-text">Leave empty to auto-generate from title</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Create Template
+                            </button>
+                            <a href="{{ url_for('templates_.templates') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('title').addEventListener('input', function() {
+    const title = this.value;
+    const slug = title.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/[\s_]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    document.getElementById('slug').placeholder = slug || 'auto-generated';
+});
+</script>
+{% endblock %}
+
+

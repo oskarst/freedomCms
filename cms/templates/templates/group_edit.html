@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% set title = "Edit Template" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Edit Template: {{ group.title }}</h1>
+                <a href="{{ url_for('templates_.templates') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Templates
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Template Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <input type="hidden" name="action" value="update_info">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" value="{{ group.title }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="slug" class="form-label">Slug</label>
+                            <input type="text" class="form-control" id="slug" name="slug" value="{{ group.slug }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ group.description }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Blocks in this Template</h5>
+                    <form method="post" class="d-flex gap-2 align-items-center">
+                        <input type="hidden" name="action" value="add_block">
+                        <select name="template_id" class="form-select" style="width:auto">
+                            <option value="">Add existing block...</option>
+                            {% for t in all_blocks %}
+                            <option value="{{ t.id }}">{{ t.title }} ({{ t.slug }})</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-outline-primary"><i class="bi bi-plus"></i> Add</button>
+                    </form>
+                </div>
+                <div class="card-body">
+                    {% if group_blocks %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Slug</th>
+                                    <th>Category</th>
+                                    <th>Order</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for b in group_blocks %}
+                                <tr>
+                                    <td>{{ b.title }}</td>
+                                    <td><code>{{ b.slug }}</code></td>
+                                    <td>
+                                        <span class="badge bg-{{ 'primary' if b.category == 'system' else 'success' }}">{{ b.category.title() }}</span>
+                                    </td>
+                                    <td><span class="badge bg-light text-dark">{{ b.sort_order }}</span></td>
+                                    <td>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="action" value="move_up">
+                                            <input type="hidden" name="membership_id" value="{{ b.membership_id }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-up"></i></button>
+                                        </form>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="action" value="move_down">
+                                            <input type="hidden" name="membership_id" value="{{ b.membership_id }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-down"></i></button>
+                                        </form>
+                                        <form method="post" class="d-inline" onsubmit="return confirm('Remove this block from the template?')">
+                                            <input type="hidden" name="action" value="remove_block">
+                                            <input type="hidden" name="membership_id" value="{{ b.membership_id }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i> Remove</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-muted">No blocks in this template yet. Use the selector above to add blocks.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

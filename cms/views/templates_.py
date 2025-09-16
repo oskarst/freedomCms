@@ -12,45 +12,162 @@ from ..utils import slugify
 
 bp = Blueprint('templates_', __name__)
 
-@bp.route('/templates', methods=['GET', 'POST'])
+@bp.route('/templates', methods=['GET'])
 @login_required
 @admin_required
 def templates():
-    """List all templates"""
+    """List all templates (template groups)"""
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('''
+        SELECT g.*, COUNT(tgb.id) as blocks_count
+        FROM template_groups g
+        LEFT JOIN template_group_blocks tgb ON tgb.group_id = g.id
+        GROUP BY g.id
+        ORDER BY g.created_at DESC
+    ''')
+    groups = cursor.fetchall()
+    return render_template('templates/groups.html', groups=groups)
+
+@bp.route('/templates/groups/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_template_group():
+    """Add a new template (group of blocks)"""
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        slug_input = request.form.get('slug', '').strip()
+        description = request.form.get('description', '').strip()
+        if not title:
+            flash('Title is required', 'error')
+            return redirect(url_for('templates_.add_template_group'))
+        if not slug_input:
+            slug_input = slugify(title)
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('SELECT id FROM template_groups WHERE slug = ?', (slug_input,))
+        if cursor.fetchone():
+            flash('Template with this slug already exists', 'error')
+            return redirect(url_for('templates_.add_template_group'))
+        cursor.execute('INSERT INTO template_groups (title, slug, description) VALUES (?, ?, ?)',
+                       (title, slug_input, description))
+        db.commit()
+        flash('Template created', 'success')
+        return redirect(url_for('templates_.templates'))
+    return render_template('templates/group_add.html')
+
+@bp.route('/templates/groups/<int:group_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_template_group(group_id: int):
+    """Edit template group details and membership"""
     db = get_db()
     cursor = db.cursor()
 
-    # Handle import action
+    # Load group
+    cursor.execute('SELECT * FROM template_groups WHERE id = ?', (group_id,))
+    group = cursor.fetchone()
+    if not group:
+        flash('Template not found', 'error')
+        return redirect(url_for('templates_.templates'))
+
     if request.method == 'POST':
         action = request.form.get('action')
-        if action == 'import':
-            import_file = request.files.get('import_file')
-            overwrite_existing = request.form.get('overwrite_existing') == 'on'
-
-            if import_file and import_file.filename.endswith('.json'):
-                try:
-                    import_data = json.load(import_file)
-                    imported_count = import_templates(import_data, overwrite_existing, cursor)
-                    db.commit()
-                    flash(f'Successfully imported {imported_count} template block(s)', 'success')
-                except Exception as e:
-                    db.rollback()
-                    flash(f'Import failed: {str(e)}', 'error')
+        if action == 'update_info':
+            title = request.form.get('title', '').strip()
+            slug_input = request.form.get('slug', '').strip()
+            description = request.form.get('description', '').strip()
+            if not title:
+                flash('Title is required', 'error')
+                return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+            if not slug_input:
+                slug_input = slugify(title)
+            # Unique slug check excluding current
+            cursor.execute('SELECT id FROM template_groups WHERE slug = ? AND id != ?', (slug_input, group_id))
+            if cursor.fetchone():
+                flash('Another template with this slug exists', 'error')
+                return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+            cursor.execute('UPDATE template_groups SET title = ?, slug = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                           (title, slug_input, description, group_id))
+            db.commit()
+            flash('Template info updated', 'success')
+            return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+        elif action == 'add_block':
+            template_id = request.form.get('template_id', type=int)
+            if not template_id:
+                flash('Select a block to add', 'error')
+                return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+            # Determine next sort order
+            cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM template_group_blocks WHERE group_id = ?', (group_id,))
+            next_order = (cursor.fetchone()[0] or 0) + 1
+            cursor.execute('INSERT INTO template_group_blocks (group_id, template_id, sort_order) VALUES (?, ?, ?)',
+                           (group_id, template_id, next_order))
+            db.commit()
+            flash('Block added to template', 'success')
+            return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+        elif action == 'remove_block':
+            membership_id = request.form.get('membership_id', type=int)
+            cursor.execute('DELETE FROM template_group_blocks WHERE id = ? AND group_id = ?', (membership_id, group_id))
+            db.commit()
+            flash('Block removed from template', 'success')
+            return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+        elif action in ('move_up', 'move_down'):
+            membership_id = request.form.get('membership_id', type=int)
+            # Get current
+            cursor.execute('SELECT id, sort_order FROM template_group_blocks WHERE id = ? AND group_id = ?', (membership_id, group_id))
+            current = cursor.fetchone()
+            if not current:
+                return redirect(url_for('templates_.edit_template_group', group_id=group_id))
+            if action == 'move_up':
+                cursor.execute('''
+                    SELECT id, sort_order FROM template_group_blocks
+                    WHERE group_id = ? AND sort_order < ?
+                    ORDER BY sort_order DESC LIMIT 1
+                ''', (group_id, current['sort_order']))
+                neighbor = cursor.fetchone()
             else:
-                flash('Please select a valid JSON file', 'error')
+                cursor.execute('''
+                    SELECT id, sort_order FROM template_group_blocks
+                    WHERE group_id = ? AND sort_order > ?
+                    ORDER BY sort_order ASC LIMIT 1
+                ''', (group_id, current['sort_order']))
+                neighbor = cursor.fetchone()
+            if neighbor:
+                cursor.execute('UPDATE template_group_blocks SET sort_order = ? WHERE id = ?', (neighbor['sort_order'], current['id']))
+                cursor.execute('UPDATE template_group_blocks SET sort_order = ? WHERE id = ?', (current['sort_order'], neighbor['id']))
+                db.commit()
+            return redirect(url_for('templates_.edit_template_group', group_id=group_id))
 
-            return redirect(url_for('templates_.templates'))
+    # Load available blocks and membership
     cursor.execute('''
-        SELECT t.*,
-               COUNT(CASE WHEN pt.use_default = 0 THEN 1 END) as override_count
-        FROM page_template_defs t
-        LEFT JOIN page_templates pt ON t.id = pt.template_id
-        GROUP BY t.id
-        ORDER BY t.sort_order
-    ''')
-    templates_list = cursor.fetchall()
+        SELECT tgb.id as membership_id, tgb.sort_order, d.id as template_id, d.title, d.slug, d.category
+        FROM template_group_blocks tgb
+        JOIN page_template_defs d ON d.id = tgb.template_id
+        WHERE tgb.group_id = ?
+        ORDER BY tgb.sort_order
+    ''', (group_id,))
+    group_blocks = cursor.fetchall()
 
-    return render_template('templates/templates.html', templates=templates_list, active_tab='page')
+    cursor.execute('SELECT id, title, slug FROM page_template_defs ORDER BY category, sort_order')
+    all_blocks = cursor.fetchall()
+
+    return render_template('templates/group_edit.html', group=group, group_blocks=group_blocks, all_blocks=all_blocks)
+
+@bp.route('/templates/groups/<int:group_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_template_group(group_id: int):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('SELECT title FROM template_groups WHERE id = ?', (group_id,))
+    row = cursor.fetchone()
+    if not row:
+        flash('Template not found', 'error')
+        return redirect(url_for('templates_.templates'))
+    cursor.execute('DELETE FROM template_groups WHERE id = ?', (group_id,))
+    db.commit()
+    flash(f'Template "{row["title"]}" deleted', 'success')
+    return redirect(url_for('templates_.templates'))
 
 @bp.route('/templates/export')
 @login_required

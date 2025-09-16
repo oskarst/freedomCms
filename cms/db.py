@@ -148,6 +148,32 @@ def init_db():
         )
     ''')
 
+    # Template groups (collections of template blocks)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS template_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            description TEXT DEFAULT '',
+            is_default BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Template group membership/order
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS template_group_blocks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            template_id INTEGER NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES template_groups (id) ON DELETE CASCADE,
+            FOREIGN KEY (template_id) REFERENCES page_template_defs (id) ON DELETE CASCADE
+        )
+    ''')
+
     
 
     # Media library table
@@ -318,5 +344,19 @@ def init_db():
     # Update junction tables to point to new ids
     for old_id, new_id in old_to_new_page.items():
         cursor.execute('UPDATE page_templates SET template_id = ? WHERE template_id = ?', (new_id, old_id))
+
+    # Initialize a default template group if none exists: include all current blocks
+    cursor.execute('SELECT COUNT(*) FROM template_groups')
+    if (cursor.fetchone()[0] or 0) == 0:
+        cursor.execute('INSERT INTO template_groups (title, slug, description, is_default) VALUES (?, ?, ?, ?)',
+                       ('Default Template', 'default-template', 'Template built from current default blocks', 1))
+        group_id = cursor.lastrowid
+        cursor.execute('SELECT id FROM page_template_defs ORDER BY sort_order')
+        rows = cursor.fetchall()
+        order_index = 1
+        for row in rows:
+            cursor.execute('INSERT INTO template_group_blocks (group_id, template_id, sort_order) VALUES (?, ?, ?)',
+                           (group_id, row['id'], order_index))
+            order_index += 1
 
     db.commit()

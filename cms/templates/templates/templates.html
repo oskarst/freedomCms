@@ -6,7 +6,7 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Template Blocks</h1>
+                <h1>Templates</h1>
                 <div class="d-flex gap-2">
                     <form method="post" action="{{ url_for('templates_.export_selected_templates') }}" id="exportSelectedTemplatesForm" style="display:none"></form>
                     <button type="button" id="exportSelectedTemplatesBtn" class="btn btn-success" style="display:none">
@@ -19,7 +19,7 @@
                         <i class="bi bi-upload"></i> Import
                     </button>
                     <a href="{{ url_for('templates_.add_template') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add Template Block
+                        <i class="bi bi-plus-circle"></i> Add Template
                     </a>
                 </div>
             </div>
@@ -30,7 +30,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="mb-3">Page Template Blocks</h5>
+                    <h5 class="mb-3">Templates</h5>
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead>
@@ -86,7 +86,7 @@
                                             </button>
                                         </form>
                                         <form method="post" action="{{ url_for('templates_.delete_template', template_id=template.id) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this template block?')">
+                                              onsubmit="return confirm('Are you sure you want to delete this template?')">
                                             <button type="submit" class="btn btn-sm btn-outline-danger">
                                                 <i class="bi bi-trash"></i> Delete
                                             </button>
@@ -107,7 +107,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="importTemplatesModalLabel">Import Template Blocks</h5>
+                <h5 class="modal-title" id="importTemplatesModalLabel">Import Templates</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" enctype="multipart/form-data" action="{{ url_for('templates_.templates', tab=active_tab) }}">
@@ -121,7 +121,7 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="overwriteTemplatesExisting" name="overwrite_existing">
                         <label class="form-check-label" for="overwriteTemplatesExisting">
-                            Overwrite existing template blocks with same slug
+                            Overwrite existing templates with same slug
                         </label>
                     </div>
                 </div>
