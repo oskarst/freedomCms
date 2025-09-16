@@ -338,8 +338,6 @@ def init_db():
         content = row['content']
         is_default = row['is_default']
         sort_order = row['sort_order']
-        if slug.startswith('blog_'):
-            continue
         new_slug = slug
         cursor.execute('INSERT OR IGNORE INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters) VALUES (?, ?, ?, ?, ?, ?, ?)',
                        (title, new_slug, category, content, is_default, sort_order, '{}'))

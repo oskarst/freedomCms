@@ -71,8 +71,3 @@ def generate_page_html(page_id, preview=False):
 
         return filename
 
-def generate_blog_post_html(post_id, preview=False):
-    raise NotImplementedError('Blog feature has been removed')
-
-def generate_blog_index_pages(per_page=10):
-    raise NotImplementedError('Blog feature has been removed')
