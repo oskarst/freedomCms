@@ -30,6 +30,78 @@ def generate_page_html(page_id, preview=False):
     ''', (page_id,))
     page_templates = cursor.fetchall()
 
+    # Helper: replace special tokens within a content string
+    def replace_special_tokens(raw_content: str) -> str:
+        if not raw_content or '{{' not in raw_content:
+            return raw_content
+
+        content_out = raw_content
+
+        # Page-level tokens
+        # {{page:title}}
+        content_out = content_out.replace('{{page:title}}', page['title'] or '')
+        # {{page:excerpt}}
+        content_out = content_out.replace('{{page:excerpt}}', (page['excerpt'] or '') if 'excerpt' in page.keys() else '')
+
+        # Blog tokens
+        # {{blog:categories}} -> UL of categories with links to blog container page
+        if '{{blog:categories}}' in content_out:
+            # Find blog container page (first one)
+            cursor.execute('SELECT slug FROM pages WHERE is_blog_container = 1 ORDER BY id LIMIT 1')
+            row = cursor.fetchone()
+            container_slug = row['slug'] if row and 'slug' in row.keys() else 'index'
+
+            # Load categories
+            cursor.execute("""
+                SELECT id, COALESCE(NULLIF(title, ''), slug) as title, slug
+                FROM blog_categories
+                ORDER BY sort_order, title
+            """)
+            cats = cursor.fetchall()
+            if cats:
+                items = []
+                for c in cats:
+                    href = f'/{container_slug}.html?category={c["slug"]}'
+                    items.append(f'<li><a href="{href}">{c["title"]}</a></li>')
+                html = '<ul>' + ''.join(items) + '</ul>'
+            else:
+                html = '<ul></ul>'
+            content_out = content_out.replace('{{blog:categories}}', html)
+
+        # {{blog:category:[id]}} -> UL of posts within category id
+        # support also {{blog:category:id}}
+        import re as _re
+        def _replace_category_posts(match):
+            cat_id_raw = match.group(1) or ''
+            cat_id = None
+            try:
+                cat_id = int(cat_id_raw.strip())
+            except Exception:
+                return ''
+            # Load posts within category
+            cursor.execute("""
+                SELECT p.title, p.slug
+                FROM pages p
+                JOIN page_blog_categories pc ON pc.page_id = p.id
+                WHERE p.type = 'blog' AND pc.category_id = ?
+                ORDER BY p.created_at DESC
+            """, (cat_id,))
+            posts = cursor.fetchall()
+            if not posts:
+                return '<ul></ul>'
+            items = []
+            for r in posts:
+                href = f'/{r["slug"]}.html'
+                items.append(f'<li><a href="{href}">{r["title"]}</a></li>')
+            return '<ul>' + ''.join(items) + '</ul>'
+
+        # [id] or :id pattern
+        # {{blog:category:[123]}} or {{blog:category:123}}
+        content_out = _re.sub(r"\{\{\s*blog:category:\[(\d+)\]\s*\}\}", _replace_category_posts, content_out)
+        content_out = _re.sub(r"\{\{\s*blog:category:(\d+)\s*\}\}", _replace_category_posts, content_out)
+
+        return content_out
+
     # Build HTML content
     html_content = ''
     for pt in page_templates:
@@ -48,13 +120,16 @@ def generate_page_html(page_id, preview=False):
         parameters = {row['parameter_name']: row['parameter_value'] for row in cursor.fetchall()}
         
         # Replace parameters with actual content
-        if content and '{{' in content and parameters:
-            for param_name, param_value in parameters.items():
-                # Handle various parameter formats
-                content = content.replace(f'{{{{ {param_name} }}}}', param_value)
-                content = content.replace(f'{{{{{param_name}}}}}', param_value)  # Handle without spaces
-                content = content.replace(f'{{{{ {param_name.strip()} }}}}', param_value)  # Handle with extra spaces
-                content = content.replace(f'{{{{{param_name.strip()}}}}}', param_value)  # Handle without spaces and extra spaces
+        if content and '{{' in content:
+            # First replace user-defined parameters
+            if parameters:
+                for param_name, param_value in parameters.items():
+                    content = content.replace(f'{{{{ {param_name} }}}}', param_value)
+                    content = content.replace(f'{{{{{param_name}}}}}', param_value)
+                    content = content.replace(f'{{{{ {param_name.strip()} }}}}', param_value)
+                    content = content.replace(f'{{{{{param_name.strip()}}}}}', param_value)
+            # Then replace special tokens (blog/page)
+            content = replace_special_tokens(content)
         
         html_content += content
 

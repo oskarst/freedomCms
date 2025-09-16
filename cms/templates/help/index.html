@@ -156,6 +156,33 @@ Block 5: "Normal content"         → Back to normal level</code></pre>
     </div>
   </div>
 
+  <h3 class="mt-4">Special Tokens</h3>
+  <p>Use these special tokens in any template block content to pull dynamic values from the current page or blog:</p>
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title">Page Tokens</h6>
+          <ul class="small">
+            <li><code>{{ "{{page:title}}" }}</code> — Inserts the current page title</li>
+            <li><code>{{ "{{page:excerpt}}" }}</code> — Inserts the current page excerpt (for blog pages)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title">Blog Tokens</h6>
+          <ul class="small">
+            <li><code>{{ "{{blog:categories}}" }}</code> — Unordered list of all blog categories, each linked to the blog container page</li>
+            <li><code>{{ "{{blog:category:[123]}}" }}</code> or <code>{{ "{{blog:category:123}}" }}</code> — Unordered list of blog posts in category ID 123</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="alert alert-info mt-3">
     <h6><strong>Features:</strong></h6>
     <ul class="mb-0">
