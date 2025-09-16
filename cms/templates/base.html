@@ -27,7 +27,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link{% if request.endpoint == 'dashboard' %} active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link{% if 'pages' in request.endpoint and request.args.get('type') != 'blog' %} active{% endif %}" href="{{ url_for('pages.pages') }}">Pages</a></li>
+                    <li class="nav-item"><a class="nav-link{% if 'pages' in request.endpoint and request.args.get('type') == 'page' %} active{% endif %}" href="{{ url_for('pages.pages', type='page') }}">Pages</a></li>
                     <li class="nav-item"><a class="nav-link{% if 'pages' in request.endpoint and request.args.get('type') == 'blog' %} active{% endif %}" href="{{ url_for('pages.pages', type='blog') }}">Blog</a></li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle{% if 'templates' in request.endpoint %} active{% endif %}" href="#" id="templatesDropdown" role="button" data-bs-toggle="dropdown">

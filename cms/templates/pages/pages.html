@@ -9,7 +9,7 @@
                 <h1>{{ 'Blog Articles' if page_type == 'blog' else 'Pages' }}</h1>
                 <div class="d-flex gap-2">
                     <div class="btn-group" role="group" aria-label="Section">
-                        <a href="{{ url_for('pages.pages', type='page') }}" class="btn btn-outline-secondary{% if page_type != 'blog' %} active{% endif %}">Pages</a>
+                        <a href="{{ url_for('pages.pages', type='page') }}" class="btn btn-outline-secondary{% if page_type == 'page' %} active{% endif %}">Pages</a>
                         <a href="{{ url_for('pages.pages', type='blog') }}" class="btn btn-outline-secondary{% if page_type == 'blog' %} active{% endif %}">Blog</a>
                     </div>
                     <form method="post" action="{{ url_for('pages.export_selected_pages') }}" id="exportSelectedForm" style="display: none;">

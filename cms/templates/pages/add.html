@@ -6,9 +6,9 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Add Page</h1>
-                <a href="{{ url_for('pages.pages') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Pages
+                <h1>{{ 'Add Blog' if page_type == 'blog' else 'Add Page' }}</h1>
+                <a href="{{ url_for('pages.pages', type=page_type) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to {{ 'Blog Articles' if page_type == 'blog' else 'Pages' }}
                 </a>
             </div>
         </div>
@@ -18,7 +18,7 @@
         <div class="col-md-8 mx-auto">
             <div class="card">
                 <div class="card-header">
-                    <h5>Page Information</h5>
+                    <h5>{{ 'Blog' if page_type == 'blog' else 'Page' }} Information</h5>
                 </div>
                 <div class="card-body">
                     <form method="post">
@@ -47,9 +47,9 @@
 
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-plus-circle"></i> Create Page
+                                <i class="bi bi-plus-circle"></i> {{ 'Create Blog' if page_type == 'blog' else 'Create Page' }}
                             </button>
-                            <a href="{{ url_for('pages.pages') }}" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="{{ url_for('pages.pages', type=page_type) }}" class="btn btn-outline-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>

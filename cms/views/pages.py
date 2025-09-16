@@ -175,9 +175,10 @@ def pages():
 
             return redirect(url_for('pages.pages'))
 
-    # Filter by page type (defaults to 'page' when absent)
+    # Filter by page type (defaults to 'page')
     page_type = request.args.get('type') or 'page'
     if page_type == 'blog':
+        # Load blog pages first and fetch before running another query on the same cursor
         cursor.execute('''
             SELECT p.*, g.title AS template_group_title
             FROM pages p
@@ -185,6 +186,7 @@ def pages():
             WHERE p.type = ?
             ORDER BY p.created_at DESC
         ''', (page_type,))
+        pages_list = cursor.fetchall()
         # Load blog categories for management UI
         cursor.execute("SELECT id, COALESCE(NULLIF(title, ''), slug) as title, slug, sort_order FROM blog_categories ORDER BY sort_order, title")
         blog_categories = cursor.fetchall()
@@ -196,8 +198,8 @@ def pages():
             WHERE p.type = 'page'
             ORDER BY p.created_at DESC
         ''')
+        pages_list = cursor.fetchall()
         blog_categories = []
-    pages_list = cursor.fetchall()
 
     return render_template('pages/pages.html', pages=pages_list, page_type=page_type, blog_categories=blog_categories)
 
@@ -488,8 +490,9 @@ def add_page():
         template_group_id = request.form.get('template_group_id', type=int)
 
         if not title:
-            flash('Page title is required', 'error')
-            return redirect(url_for('pages.add_page'))
+            entity_label = 'Blog' if default_type == 'blog' else 'Page'
+            flash(f'{entity_label} title is required', 'error')
+            return redirect(url_for('pages.add_page', type=default_type))
 
         # Generate slug if not provided
         if not slug_input:
@@ -498,8 +501,9 @@ def add_page():
         # Check if slug already exists
         cursor.execute('SELECT id FROM pages WHERE slug = ?', (slug_input,))
         if cursor.fetchone():
-            flash('Page with this slug already exists', 'error')
-            return redirect(url_for('pages.add_page'))
+            entity_label = 'Blog' if default_type == 'blog' else 'Page'
+            flash(f'{entity_label} with this slug already exists', 'error')
+            return redirect(url_for('pages.add_page', type=default_type))
 
         # Insert new page
         cursor.execute('INSERT INTO pages (title, slug, mode, template_group_id, type) VALUES (?, ?, ?, ?, ?)', (title, slug_input, 'simple', template_group_id, default_type if default_type in ('page', 'blog') else 'page'))
@@ -573,7 +577,8 @@ def add_page():
                     pass
 
         db.commit()
-        flash('Page created successfully', 'success')
+        entity_label = 'Blog' if default_type == 'blog' else 'Page'
+        flash(f'{entity_label} created successfully', 'success')
         return redirect(url_for('pages.edit_page', page_id=page_id))
 
     # Load available template groups
