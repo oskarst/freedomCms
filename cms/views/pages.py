@@ -702,6 +702,28 @@ def delete_page(page_id):
     flash(f'Page "{page["title"]}" deleted successfully', 'success')
     return redirect(url_for('pages.pages'))
 
+@bp.route('/pages/delete-all', methods=['POST'])
+@login_required
+def delete_all_pages():
+    """Delete all pages"""
+    db = get_db()
+    cursor = db.cursor()
+
+    # Get count of pages before deletion
+    cursor.execute('SELECT COUNT(*) FROM pages')
+    page_count = cursor.fetchone()[0]
+
+    if page_count == 0:
+        flash('No pages to delete', 'info')
+        return redirect(url_for('pages.pages'))
+
+    # Delete all pages (cascade will delete page_templates and page_template_parameters)
+    cursor.execute('DELETE FROM pages')
+    db.commit()
+
+    flash(f'All {page_count} pages deleted successfully', 'success')
+    return redirect(url_for('pages.pages'))
+
 @bp.route('/pages/<int:page_id>/duplicate', methods=['POST'])
 @login_required
 def duplicate_page(page_id):

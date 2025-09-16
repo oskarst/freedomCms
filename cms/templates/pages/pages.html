@@ -25,6 +25,11 @@
                             <i class="bi bi-arrow-clockwise"></i> Re-publish All Pages
                         </button>
                     </form>
+                    <form method="post" action="{{ url_for('pages.delete_all_pages') }}" class="d-inline" onsubmit="return confirm('WARNING: This will permanently delete ALL pages and cannot be undone. Are you absolutely sure?')">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Delete All Pages
+                        </button>
+                    </form>
                     <a href="{{ url_for('pages.add_page') }}" class="btn btn-primary">
                         <i class="bi bi-plus-circle"></i> Add Page
                     </a>
