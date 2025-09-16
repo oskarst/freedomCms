@@ -120,6 +120,12 @@ def init_db():
         )
     ''')
 
+    # Add template_group_id to pages if missing
+    try:
+        cursor.execute('ALTER TABLE pages ADD COLUMN template_group_id INTEGER')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Page templates junction table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS page_templates (

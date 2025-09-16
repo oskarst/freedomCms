@@ -34,8 +34,8 @@
 
         <div class="row">
             <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1>Edit Page</h1>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h1 class="mb-0">Edit Page</h1>
                     <div class="d-flex gap-2">
                         <a href="{{ url_for('pages.pages') }}" class="btn btn-outline-secondary rounded-pill">
                             <i class="bi bi-arrow-left"></i> Back to Pages
@@ -56,6 +56,11 @@
                         </button>
                     </div>
                 </div>
+                {% if page_template_label %}
+                <div class="mb-4">
+                    <span class="badge bg-secondary">Template: {{ page_template_label }}</span>
+                </div>
+                {% endif %}
             </div>
         </div>
 

@@ -118,7 +118,12 @@ def pages():
 
             return redirect(url_for('pages.pages'))
 
-    cursor.execute('SELECT * FROM pages ORDER BY created_at DESC')
+    cursor.execute('''
+        SELECT p.*, g.title AS template_group_title
+        FROM pages p
+        LEFT JOIN template_groups g ON g.id = p.template_group_id
+        ORDER BY p.created_at DESC
+    ''')
     pages_list = cursor.fetchall()
 
     return render_template('pages/pages.html', pages=pages_list)
@@ -133,12 +138,14 @@ def export_pages():
     # Get all pages with their templates
     cursor.execute('''
         SELECT
-            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at,
+            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at, p.template_group_id,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
-            t.title as template_title, t.slug as template_slug, t.category, t.default_parameters
+            t.title as template_title, t.slug as template_slug, t.category, t.default_parameters,
+            tg.title as template_group_title
         FROM pages p
         LEFT JOIN page_templates pt ON p.id = pt.page_id
         LEFT JOIN page_template_defs t ON pt.template_id = t.id
+        LEFT JOIN template_groups tg ON p.template_group_id = tg.id
         ORDER BY p.id, pt.sort_order
     ''')
 
@@ -158,7 +165,9 @@ def export_pages():
                 'mode': row['mode'] if 'mode' in row.keys() else 'simple',
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
-                'templates': []
+                'templates': [],
+                'template_group_id': row['template_group_id'],
+                'template_group_title': row['template_group_title']
             }
 
         if row['pt_id']:  # Only add if there's a page template
@@ -216,12 +225,14 @@ def export_selected_pages():
     placeholders = ','.join('?' * len(page_ids))
     cursor.execute(f'''
         SELECT
-            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at,
+            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at, p.template_group_id,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
-            t.title as template_title, t.slug as template_slug, t.category, t.default_parameters
+            t.title as template_title, t.slug as template_slug, t.category, t.default_parameters,
+            tg.title as template_group_title
         FROM pages p
         LEFT JOIN page_templates pt ON p.id = pt.page_id
         LEFT JOIN page_template_defs t ON pt.template_id = t.id
+        LEFT JOIN template_groups tg ON p.template_group_id = tg.id
         WHERE p.id IN ({placeholders})
         ORDER BY p.id, pt.sort_order
     ''', page_ids)
@@ -242,7 +253,9 @@ def export_selected_pages():
                 'mode': row['mode'] if 'mode' in row.keys() else 'simple',
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
-                'templates': []
+                'templates': [],
+                'template_group_id': row['template_group_id'],
+                'template_group_title': row['template_group_title']
             }
 
         if row['pt_id']:  # Only add if there's a page template
@@ -308,15 +321,24 @@ def import_pages(import_data, overwrite_existing, cursor):
                 cursor.execute('DELETE FROM page_templates WHERE page_id = ?', (existing_page['id'],))
                 cursor.execute('DELETE FROM pages WHERE id = ?', (existing_page['id'],))
 
+            # Try to find template group by title if specified
+            template_group_id = None
+            if 'template_group_title' in page_data and page_data['template_group_title']:
+                cursor.execute('SELECT id FROM template_groups WHERE title = ?', (page_data['template_group_title'],))
+                row = cursor.fetchone()
+                if row:
+                    template_group_id = row['id']
+
             # Insert new page
             cursor.execute('''
-                INSERT INTO pages (title, slug, published, mode, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO pages (title, slug, published, mode, template_group_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 page_data['title'],
                 page_data['slug'],
                 page_data.get('published', 0),
                 page_data.get('mode', 'simple'),
+                template_group_id,
                 page_data.get('created_at', '2024-01-01T00:00:00'),
                 page_data.get('updated_at', '2024-01-01T00:00:00')
             ))
@@ -384,6 +406,7 @@ def add_page():
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
         slug_input = request.form.get('slug', '').strip()
+        template_group_id = request.form.get('template_group_id', type=int)
 
         if not title:
             flash('Page title is required', 'error')
@@ -400,47 +423,85 @@ def add_page():
             return redirect(url_for('pages.add_page'))
 
         # Insert new page
-        cursor.execute('INSERT INTO pages (title, slug, mode) VALUES (?, ?, ?)', (title, slug_input, 'simple'))
+        cursor.execute('INSERT INTO pages (title, slug, mode, template_group_id) VALUES (?, ?, ?, ?)', (title, slug_input, 'simple', template_group_id))
         page_id = cursor.lastrowid
 
-        # Get all default PAGE templates and create page templates
-        cursor.execute("SELECT id, sort_order FROM page_template_defs WHERE is_default = 1 ORDER BY sort_order")
-        default_templates = cursor.fetchall()
-
-        for template in default_templates:
-            # Get template title and default parameters
-            cursor.execute('SELECT title, default_parameters FROM page_template_defs WHERE id = ?', (template['id'],))
-            template_info = cursor.fetchone()
-            default_title = template_info['title'] if template_info else 'Untitled Block'
-            default_parameters_json = template_info['default_parameters'] if template_info else '{}'
-            
+        # If a template group was selected, add its blocks to the page
+        if template_group_id:
             cursor.execute('''
-                INSERT INTO page_templates (page_id, template_id, title, sort_order)
-                VALUES (?, ?, ?, ?)
-            ''', (page_id, template['id'], default_title, template['sort_order']))
-            
-            # Get the new page template ID
-            page_template_id = cursor.lastrowid
-            
-            # Create default parameters if they exist
-            try:
-                import json
-                default_parameters = json.loads(default_parameters_json)
-                if default_parameters:
-                    for param_name, param_value in default_parameters.items():
-                        cursor.execute('''
-                            INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
-                            VALUES (?, ?, ?)
-                        ''', (page_template_id, param_name, param_value))
-            except (json.JSONDecodeError, TypeError):
-                # Invalid JSON or empty parameters, skip
-                pass
+                SELECT d.id, d.title, d.default_parameters, tgb.sort_order
+                FROM template_group_blocks tgb
+                JOIN page_template_defs d ON d.id = tgb.template_id
+                WHERE tgb.group_id = ?
+                ORDER BY tgb.sort_order
+            ''', (template_group_id,))
+            group_blocks = cursor.fetchall()
+
+            for block in group_blocks:
+                # Insert block into page
+                cursor.execute('''
+                    INSERT INTO page_templates (page_id, template_id, title, sort_order)
+                    VALUES (?, ?, ?, ?)
+                ''', (page_id, block['id'], block['title'], block['sort_order']))
+
+                # Get the new page template ID
+                page_template_id = cursor.lastrowid
+
+                # Create default parameters if they exist
+                try:
+                    import json
+                    default_parameters = json.loads(block['default_parameters'] or '{}')
+                    if default_parameters:
+                        for param_name, param_value in default_parameters.items():
+                            cursor.execute('''
+                                INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
+                                VALUES (?, ?, ?)
+                            ''', (page_template_id, param_name, param_value))
+                except (json.JSONDecodeError, TypeError):
+                    # Invalid JSON or empty parameters, skip
+                    pass
+        else:
+            # Fallback: add default blocks if no template group selected
+            cursor.execute("SELECT id, sort_order FROM page_template_defs WHERE is_default = 1 ORDER BY sort_order")
+            default_templates = cursor.fetchall()
+
+            for template in default_templates:
+                cursor.execute('SELECT title, default_parameters FROM page_template_defs WHERE id = ?', (template['id'],))
+                template_info = cursor.fetchone()
+                default_title = template_info['title'] if template_info else 'Untitled Block'
+                default_parameters_json = template_info['default_parameters'] if template_info else '{}'
+
+                cursor.execute('''
+                    INSERT INTO page_templates (page_id, template_id, title, sort_order)
+                    VALUES (?, ?, ?, ?)
+                ''', (page_id, template['id'], default_title, template['sort_order']))
+
+                # Get the new page template ID
+                page_template_id = cursor.lastrowid
+
+                # Create default parameters if they exist
+                try:
+                    import json
+                    default_parameters = json.loads(default_parameters_json)
+                    if default_parameters:
+                        for param_name, param_value in default_parameters.items():
+                            cursor.execute('''
+                                INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
+                                VALUES (?, ?, ?)
+                            ''', (page_template_id, param_name, param_value))
+                except (json.JSONDecodeError, TypeError):
+                    # Invalid JSON or empty parameters, skip
+                    pass
 
         db.commit()
         flash('Page created successfully', 'success')
         return redirect(url_for('pages.edit_page', page_id=page_id))
 
-    return render_template('pages/add.html')
+    # Load available template groups
+    cursor.execute('SELECT id, title FROM template_groups ORDER BY title')
+    template_groups = cursor.fetchall()
+
+    return render_template('pages/add.html', template_groups=template_groups)
 
 @bp.route('/pages/<int:page_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -678,7 +739,12 @@ def edit_page(page_id):
     cursor.execute('SELECT id, title, slug, category FROM page_template_defs ORDER BY category, title')
     available_templates = cursor.fetchall()
 
-    return render_template('pages/edit.html', page=page, page_templates=page_templates, available_templates=available_templates)
+    # Load template group label for this page
+    cursor.execute('SELECT title FROM template_groups WHERE id = ?', (page['template_group_id'],))
+    grp = cursor.fetchone()
+    page_template_label = grp['title'] if grp else None
+
+    return render_template('pages/edit.html', page=page, page_templates=page_templates, available_templates=available_templates, page_template_label=page_template_label)
 
 @bp.route('/pages/<int:page_id>/delete', methods=['POST'])
 @login_required

@@ -52,6 +52,7 @@
                                     <th>Title</th>
                                     <th>Slug</th>
                                     <th>Status</th>
+                                    <th>Created with Template</th>
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
@@ -72,6 +73,13 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ page.created_at[:10] }}</td>
+                                    <td>
+                                        {% if page.template_group_title %}
+                                            <span class="badge bg-secondary">{{ page.template_group_title }}</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">—</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <a href="{{ url_for('pages.edit_page', page_id=page.id) }}" class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-pencil"></i> Edit

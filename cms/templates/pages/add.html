@@ -34,6 +34,17 @@
                             <div class="form-text">Leave empty to auto-generate from title (e.g., "my-page-title")</div>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="template_group_id" class="form-label">Template</label>
+                            <select class="form-select" id="template_group_id" name="template_group_id">
+                                <option value="">-- Use Default Blocks --</option>
+                                {% for group in template_groups %}
+                                <option value="{{ group.id }}">{{ group.title }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Choose a template to populate the page with its blocks, or leave empty for default blocks</div>
+                        </div>
+
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-plus-circle"></i> Create Page

@@ -12,13 +12,34 @@ from ..utils import slugify
 
 bp = Blueprint('templates_', __name__)
 
-@bp.route('/templates', methods=['GET'])
+@bp.route('/templates', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def templates():
-    """List all templates (template groups)"""
+    """List all templates (template groups) and handle import"""
     db = get_db()
     cursor = db.cursor()
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'import':
+            import_file = request.files.get('import_file')
+            overwrite_existing = request.form.get('overwrite_existing') == 'on'
+
+            if import_file and import_file.filename.endswith('.json'):
+                try:
+                    import_data = json.load(import_file)
+                    imported_count = import_template_groups(import_data, overwrite_existing, cursor)
+                    db.commit()
+                    flash(f'Successfully imported {imported_count} template(s)', 'success')
+                except Exception as e:
+                    db.rollback()
+                    flash(f'Import failed: {str(e)}', 'error')
+            else:
+                flash('Please select a valid JSON file', 'error')
+
+            return redirect(url_for('templates_.templates'))
+
     cursor.execute('''
         SELECT g.*, COUNT(tgb.id) as blocks_count
         FROM template_groups g
@@ -27,7 +48,7 @@ def templates():
         ORDER BY g.created_at DESC
     ''')
     groups = cursor.fetchall()
-    return render_template('templates/groups.html', groups=groups)
+    return render_template('templates/templates.html', groups=groups)
 
 @bp.route('/templates/groups/add', methods=['GET', 'POST'])
 @login_required
@@ -229,31 +250,57 @@ def delete_template_group(group_id: int):
     flash(f'Template "{row["title"]}" deleted', 'success')
     return redirect(url_for('templates_.templates'))
 
-@bp.route('/templates/export')
+@bp.route('/templates/export/all')
 @login_required
 @admin_required
-def export_templates():
-    """Export all template blocks to JSON"""
+def export_all_groups():
+    """Export all template groups with their blocks to JSON"""
     db = get_db()
     cursor = db.cursor()
-    cursor.execute('SELECT id, title, slug, category, content, is_default, sort_order, created_at, updated_at, default_parameters FROM page_template_defs ORDER BY sort_order')
+
+    # Get all template groups with their blocks
+    cursor.execute('''
+        SELECT
+            g.id, g.title, g.slug, g.description, g.is_default, g.created_at, g.updated_at,
+            tgb.sort_order as block_sort_order,
+            d.id as block_id, d.title as block_title, d.slug as block_slug, d.category, d.content, d.default_parameters
+        FROM template_groups g
+        LEFT JOIN template_group_blocks tgb ON g.id = tgb.group_id
+        LEFT JOIN page_template_defs d ON tgb.template_id = d.id
+        ORDER BY g.id, tgb.sort_order
+    ''')
     rows = cursor.fetchall()
 
-    export_data = [
-        {
+    # Group by template
+    templates_data = {}
+    for row in rows:
+        template_id = row['id']
+
+        if template_id not in templates_data:
+            templates_data[template_id] = {
             'id': row['id'],
             'title': row['title'],
             'slug': row['slug'],
-            'category': row['category'],
-            'content': row['content'] or '',
+                'description': row['description'],
             'is_default': row['is_default'],
-            'sort_order': row['sort_order'],
             'created_at': row['created_at'],
             'updated_at': row['updated_at'],
-            'default_parameters': row['default_parameters'] or '{}'
-        }
-        for row in rows
-    ]
+                'blocks': []
+            }
+
+        if row['block_id']:  # Only add if there's a block
+            templates_data[template_id]['blocks'].append({
+                'id': row['block_id'],
+                'title': row['block_title'],
+                'slug': row['block_slug'],
+                'category': row['category'],
+                'content': row['content'] or '',
+                'default_parameters': row['default_parameters'] or '{}',
+                'sort_order': row['block_sort_order']
+            })
+
+    # Convert to list
+    export_data = list(templates_data.values())
 
     data = json.dumps(export_data, indent=2, default=str)
     return Response(data, mimetype='application/json', headers={
@@ -263,167 +310,161 @@ def export_templates():
 @bp.route('/templates/export/selected', methods=['POST'])
 @login_required
 @admin_required
-def export_selected_templates():
-    """Export selected template blocks to JSON"""
-    selected_ids = request.form.getlist('selected_templates')
+def export_selected_groups():
+    """Export selected template groups with their blocks to JSON"""
+    selected_ids = request.form.getlist('selected_groups')
 
     if not selected_ids:
         flash('No templates selected for export', 'warning')
         return redirect(url_for('templates_.templates'))
 
     db = get_db()
-    cursor = get_db().cursor()
-    ids = [int(tid) for tid in selected_ids]
-    placeholders = ','.join('?' * len(ids))
-    cursor.execute('SELECT id, title, slug, category, content, is_default, sort_order, created_at, updated_at, default_parameters FROM page_template_defs WHERE id IN ({}) ORDER BY sort_order'.format(placeholders), ids)
+    cursor = db.cursor()
+
+    # Convert to integers
+    group_ids = [int(gid) for gid in selected_ids]
+    placeholders = ','.join('?' * len(group_ids))
+
+    # Get selected template groups with their blocks
+    cursor.execute(f'''
+        SELECT
+            g.id, g.title, g.slug, g.description, g.is_default, g.created_at, g.updated_at,
+            tgb.sort_order as block_sort_order,
+            d.id as block_id, d.title as block_title, d.slug as block_slug, d.category, d.content, d.default_parameters
+        FROM template_groups g
+        LEFT JOIN template_group_blocks tgb ON g.id = tgb.group_id
+        LEFT JOIN page_template_defs d ON tgb.template_id = d.id
+        WHERE g.id IN ({placeholders})
+        ORDER BY g.id, tgb.sort_order
+    ''', group_ids)
     rows = cursor.fetchall()
 
-    export_data = [
-        {
+    # Group by template
+    templates_data = {}
+    for row in rows:
+        template_id = row['id']
+
+        if template_id not in templates_data:
+            templates_data[template_id] = {
             'id': row['id'],
             'title': row['title'],
             'slug': row['slug'],
-            'category': row['category'],
-            'content': row['content'] or '',
+                'description': row['description'],
             'is_default': row['is_default'],
-            'sort_order': row['sort_order'],
             'created_at': row['created_at'],
             'updated_at': row['updated_at'],
-            'default_parameters': row['default_parameters'] or '{}'
-        }
-        for row in rows
-    ]
+                'blocks': []
+            }
+
+        if row['block_id']:  # Only add if there's a block
+            templates_data[template_id]['blocks'].append({
+                'id': row['block_id'],
+                'title': row['block_title'],
+                'slug': row['block_slug'],
+                'category': row['category'],
+                'content': row['content'] or '',
+                'default_parameters': row['default_parameters'] or '{}',
+                'sort_order': row['block_sort_order']
+            })
+
+    # Convert to list
+    export_data = list(templates_data.values())
 
     data = json.dumps(export_data, indent=2, default=str)
     return Response(data, mimetype='application/json', headers={
         'Content-Disposition': 'attachment; filename=selected_templates_export.json'
     })
 
-def import_templates(import_data, overwrite_existing, cursor):
-    """Import template blocks from JSON data"""
+def import_template_groups(import_data, overwrite_existing, cursor):
+    """Import template groups with their blocks from JSON data"""
     imported_count = 0
 
     if not isinstance(import_data, list):
-        raise ValueError('Invalid JSON format - expected array of templates')
+        raise ValueError('Invalid JSON format - expected array of template groups')
 
-    for t in import_data:
+    for template_data in import_data:
         try:
-            slug = t.get('slug') or slugify(t.get('title', ''))
+            slug = template_data.get('slug') or slugify(template_data.get('title', ''))
             if not slug:
                 continue
 
-            table = 'page_template_defs'
-            # Check existing by slug
-            cursor.execute(f'SELECT id FROM {table} WHERE slug = ?', (slug,))
+            # Check existing template group by slug
+            cursor.execute('SELECT id FROM template_groups WHERE slug = ?', (slug,))
             existing = cursor.fetchone()
 
             if existing and not overwrite_existing:
                 continue
 
             if existing and overwrite_existing:
-                # Remove existing template and any references
+                # Remove existing template group and its blocks
                 template_id = existing['id']
-                cursor.execute('DELETE FROM page_templates WHERE template_id = ?', (template_id,))
-                cursor.execute(f'DELETE FROM {table} WHERE id = ?', (template_id,))
+                cursor.execute('DELETE FROM template_group_blocks WHERE group_id = ?', (template_id,))
+                cursor.execute('DELETE FROM template_groups WHERE id = ?', (template_id,))
 
-            # Determine sort order
-            sort_order = t.get('sort_order')
-            if sort_order is None:
-                cursor.execute(f'SELECT COALESCE(MAX(sort_order), 0) FROM {table}')
-                sort_order = (cursor.fetchone()[0] or 0) + 1
-
-            # Insert template
-            cursor.execute(f'''
-                INSERT INTO {table} (title, slug, category, content, is_default, sort_order, default_parameters)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+            # Insert template group
+            cursor.execute('''
+                INSERT INTO template_groups (title, slug, description, is_default)
+                VALUES (?, ?, ?, ?)
             ''', (
-                t.get('title') or slug,
+                template_data.get('title') or slug,
                 slug,
-                t.get('category', 'content'),
-                t.get('content', ''),
-                t.get('is_default', 1),
-                sort_order,
-                t.get('default_parameters', '{}')
+                template_data.get('description', ''),
+                template_data.get('is_default', 0)
             ))
 
-            new_template_id = cursor.lastrowid
+            new_group_id = cursor.lastrowid
 
-            # If default, add to all existing items
-            if t.get('is_default', 1):
-                cursor.execute('SELECT id FROM pages')
-                items = cursor.fetchall()
-                for it in items:
-                    cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM page_templates WHERE page_id = ?', (it['id'],))
-                    max_order = cursor.fetchone()[0] or 0
-                    cursor.execute('INSERT INTO page_templates (page_id, template_id, sort_order) VALUES (?, ?, ?)', (it['id'], new_template_id, max_order + 1))
+            # Import blocks for this template group
+            if 'blocks' in template_data and template_data['blocks']:
+                for block_data in template_data['blocks']:
+                    # Check if block already exists by slug
+                    block_slug = block_data.get('slug') or slugify(block_data.get('title', ''))
+                    cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (block_slug,))
+                    existing_block = cursor.fetchone()
+
+                    block_id = None
+                    if existing_block:
+                        # Use existing block
+                        block_id = existing_block['id']
+                    else:
+                        # Create new block
+                        cursor.execute('''
+                            INSERT INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ''', (
+                            block_data.get('title') or block_slug,
+                            block_slug,
+                            block_data.get('category', 'content'),
+                            block_data.get('content', ''),
+                            block_data.get('is_default', 0),  # Blocks in templates are typically not default
+                            0,  # Will be set by sort order in template
+                            block_data.get('default_parameters', '{}')
+                        ))
+                        block_id = cursor.lastrowid
+
+                    # Add block to template group
+                    if block_id:
+                        cursor.execute('''
+                            INSERT INTO template_group_blocks (group_id, template_id, sort_order)
+                            VALUES (?, ?, ?)
+                        ''', (
+                            new_group_id,
+                            block_id,
+                            block_data.get('sort_order', 0)
+                        ))
 
             imported_count += 1
-        except Exception:
+        except Exception as e:
+            print(f"Error importing template '{template_data.get('title', 'unknown')}': {str(e)}")
             continue
 
     return imported_count
-
-@bp.route('/templates/add', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def add_template():
-    """Add new template"""
-    if request.method == 'POST':
-        title = request.form.get('title', '').strip()
-        category = request.form.get('category', 'content')
-        content = request.form.get('content', '').strip()
-        slug_input = request.form.get('slug', '').strip()
-        is_default = request.form.get('is_default') == 'on'
-        default_parameters = request.form.get('default_parameters', '{}').strip()
-        table = 'page_template_defs'
-
-        if not title or not content:
-            flash('Title and content are required', 'error')
-            return redirect(url_for('templates_.add_template'))
-
-        # Generate slug if not provided
-        if not slug_input:
-            slug_input = slugify(title)
-
-        db = get_db()
-        cursor = db.cursor()
-
-        # Check if slug already exists
-        cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (slug_input,))
-        if cursor.fetchone():
-            flash('Template with this slug already exists', 'error')
-            return redirect(url_for('templates_.add_template'))
-
-        # Get max sort order
-        cursor.execute('SELECT MAX(sort_order) FROM page_template_defs')
-        max_order = cursor.fetchone()[0] or 0
-
-        # Create template
-        cursor.execute('''
-            INSERT INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (title, slug_input, category, content, is_default, max_order + 1, default_parameters))
-
-        if is_default:
-            template_id = cursor.lastrowid
-            cursor.execute('SELECT id FROM pages')
-            rows = cursor.fetchall()
-            for page in rows:
-                cursor.execute('SELECT COALESCE(MAX(sort_order), 0) FROM page_templates WHERE page_id = ?', (page['id'],))
-                mo = cursor.fetchone()[0] or 0
-                cursor.execute('INSERT INTO page_templates (page_id, template_id, sort_order) VALUES (?, ?, ?)', (page['id'], template_id, mo + 1))
-
-        db.commit()
-        flash('Template created successfully', 'success')
-        return redirect(url_for('templates_.templates'))
-
-    return render_template('templates/add.html')
 
 @bp.route('/templates/<int:template_id>/edit', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def edit_template(template_id):
-    """Edit existing template"""
+    """Edit existing template block"""
     db = get_db()
     cursor = db.cursor()
 
@@ -432,7 +473,7 @@ def edit_template(template_id):
     template = cursor.fetchone()
 
     if not template:
-        flash('Template not found', 'error')
+        flash('Template block not found', 'error')
         return redirect(url_for('templates_.templates'))
 
     # Get pages that override this template
@@ -460,7 +501,7 @@ def edit_template(template_id):
         # Check if slug already exists (excluding current template)
         cursor.execute('SELECT id FROM page_template_defs WHERE slug = ? AND id != ?', (slug_input or slugify(title), template_id))
         if cursor.fetchone():
-            flash('Template with this slug already exists', 'error')
+            flash('Template block with this slug already exists', 'error')
             return redirect(url_for('templates_.edit_template', template_id=template_id))
 
         # Update template
@@ -515,7 +556,7 @@ def edit_template(template_id):
                 print(f"Error republishing page {p['id']}: {str(e)}")
                 continue
 
-        flash('Template updated successfully', 'success')
+        flash('Template block updated successfully', 'success')
         if republished_count:
             flash(f'Republished {republished_count} page(s) using this template', 'info')
         if next_url:
@@ -523,87 +564,3 @@ def edit_template(template_id):
         return redirect(url_for('templates_.templates'))
 
     return render_template('templates/edit.html', template=template, overriding_pages=overriding_pages)
-
-@bp.route('/templates/<int:template_id>/delete', methods=['POST'])
-@login_required
-@admin_required
-def delete_template(template_id):
-    """Delete template"""
-    db = get_db()
-    cursor = db.cursor()
-
-    # Get template info for confirmation
-    cursor.execute('SELECT title FROM page_template_defs WHERE id = ?', (template_id,))
-    template = cursor.fetchone()
-
-    if not template:
-        flash('Template not found', 'error')
-        return redirect(url_for('templates_.templates'))
-
-    # Delete template (cascade will delete page_templates)
-    cursor.execute('DELETE FROM page_template_defs WHERE id = ?', (template_id,))
-    db.commit()
-
-    flash(f'Template "{template["title"]}" deleted successfully', 'success')
-    return redirect(url_for('templates_.templates'))
-
-@bp.route('/templates/<int:template_id>/move/<direction>', methods=['POST'])
-@login_required
-@admin_required
-def move_template(template_id, direction):
-    """Move template up or down in order"""
-    db = get_db()
-    cursor = db.cursor()
-
-    # Get current template
-    cursor.execute('SELECT sort_order FROM page_template_defs WHERE id = ?', (template_id,))
-    current = cursor.fetchone()
-
-    if not current:
-        flash('Template not found', 'error')
-        return redirect(url_for('templates_.templates'))
-
-    # Should we also reorder existing pages?
-    reorder_pages = request.form.get('reorder_pages') == '1'
-
-    # Same table, no cross-group jumps
-
-    if direction == 'up':
-        # Find the previous template
-        cursor.execute('SELECT id, sort_order FROM page_template_defs WHERE sort_order < ? ORDER BY sort_order DESC LIMIT 1',
-                     (current['sort_order'],))
-        prev_template = cursor.fetchone()
-
-        if prev_template:
-            # Swap sort orders
-            cursor.execute('UPDATE page_template_defs SET sort_order = ? WHERE id = ?', (prev_template['sort_order'], template_id))
-            cursor.execute('UPDATE page_template_defs SET sort_order = ? WHERE id = ?', (current['sort_order'], prev_template['id']))
-            
-            # Optionally update page-specific orders (may override custom per-page ordering)
-            if reorder_pages:
-                cursor.execute('UPDATE page_templates SET sort_order = ? WHERE template_id = ?', (prev_template['sort_order'], template_id))
-                cursor.execute('UPDATE page_templates SET sort_order = ? WHERE template_id = ?', (current['sort_order'], prev_template['id']))
-
-    elif direction == 'down':
-        # Find the next template
-        cursor.execute('SELECT id, sort_order FROM page_template_defs WHERE sort_order > ? ORDER BY sort_order ASC LIMIT 1',
-                     (current['sort_order'],))
-        next_template = cursor.fetchone()
-
-        if next_template:
-            # Swap sort orders
-            cursor.execute('UPDATE page_template_defs SET sort_order = ? WHERE id = ?', (next_template['sort_order'], template_id))
-            cursor.execute('UPDATE page_template_defs SET sort_order = ? WHERE id = ?', (current['sort_order'], next_template['id']))
-            
-            # Optionally update page-specific orders
-            if reorder_pages:
-                cursor.execute('UPDATE page_templates SET sort_order = ? WHERE template_id = ?', (next_template['sort_order'], template_id))
-                cursor.execute('UPDATE page_templates SET sort_order = ? WHERE template_id = ?', (current['sort_order'], next_template['id']))
-
-    db.commit()
-    if reorder_pages:
-        flash('Template order updated. Reordered blocks across pages.', 'info')
-    else:
-        flash('Template order updated. Note: existing pages may have different block order.', 'warning')
-    return redirect(url_for('templates_.templates'))
-
