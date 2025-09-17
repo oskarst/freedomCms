@@ -637,9 +637,37 @@ def edit_page(page_id):
                 flash('Page with this slug already exists', 'error')
                 return redirect(url_for('pages.edit_page', page_id=page_id))
             
-            # Update page title, slug, blog container flag, and excerpt (excerpt used for blogs)
-            cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
-                         (page_title, page_slug, is_blog_container, page_excerpt, page_id))
+            # Handle featured image upload (blogs only)
+            featured_png = None
+            featured_webp = None
+            try:
+                if (page.get('type') == 'blog' or ('type' in page.keys() and page['type'] == 'blog')) and 'featured_image' in request.files:
+                    file = request.files.get('featured_image')
+                    if file and file.filename:
+                        from PIL import Image
+                        import uuid, os
+                        from ..db import PUB_DIR
+                        img = Image.open(file.stream).convert('RGB')
+                        img.thumbnail((1600, 1600))
+                        unique = f"featured-{uuid.uuid4().hex[:10]}"
+                        out_dir = os.path.join(PUB_DIR, 'blog')
+                        os.makedirs(out_dir, exist_ok=True)
+                        png_path = os.path.join(out_dir, f"{unique}.png")
+                        webp_path = os.path.join(out_dir, f"{unique}.webp")
+                        img.save(png_path, format='PNG', optimize=True)
+                        img.save(webp_path, format='WEBP', quality=85, method=6)
+                        featured_png = f"/blog/{unique}.png"
+                        featured_webp = f"/blog/{unique}.webp"
+            except Exception:
+                pass
+
+            # Update page title, slug, blog container flag, excerpt and featured image paths
+            if featured_png or featured_webp:
+                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, featured_png = ?, featured_webp = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+                             (page_title, page_slug, is_blog_container, page_excerpt, featured_png, featured_webp, page_id))
+            else:
+                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+                             (page_title, page_slug, is_blog_container, page_excerpt, page_id))
             
             # Update page templates
             cursor.execute('SELECT pt.id, pt.template_id, pt.use_default, pt.sort_order FROM page_templates pt WHERE pt.page_id = ? ORDER BY pt.sort_order', (page_id,))

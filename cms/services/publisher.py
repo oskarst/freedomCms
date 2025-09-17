@@ -42,6 +42,9 @@ def generate_page_html(page_id, preview=False):
         content_out = content_out.replace('{{page:title}}', page['title'] or '')
         # {{page:excerpt}}
         content_out = content_out.replace('{{page:excerpt}}', (page['excerpt'] or '') if 'excerpt' in page.keys() else '')
+        # {{page:featured:png}} and {{page:featured:webp}}
+        content_out = content_out.replace('{{page:featured:png}}', (page['featured_png'] or '') if 'featured_png' in page.keys() else '')
+        content_out = content_out.replace('{{page:featured:webp}}', (page['featured_webp'] or '') if 'featured_webp' in page.keys() else '')
 
         # Blog tokens
         # {{blog:categories}} -> UL of categories with links to blog container page

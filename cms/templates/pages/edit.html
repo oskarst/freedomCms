@@ -29,7 +29,7 @@
         </div>
     </div>
 
-    <form method="post" id="pageForm" onsubmit="return validatePageForm()">
+    <form method="post" id="pageForm" onsubmit="return validatePageForm()" enctype="multipart/form-data">
         <input type="hidden" name="action" value="save">
 
         <div class="row">
@@ -97,7 +97,7 @@
                                     <label class="form-check-label" for="is_blog_container">
                                         Used for Blog
                                     </label>
-                                    <div class="form-text">Mark this page as the blog listing/container. Hidden for Blog type pages.</div>
+                                    <div class="form-text">Mark this page as the blog listing/container. It will be re-published every time a blog is added/updated so that the index is regenerated.</div>
                                 </div>
                             </div>
                             <div class="col-md-6 d-flex align-items-center justify-content-end">
@@ -111,6 +111,20 @@
                                     <label for="page_excerpt" class="form-label fw-bold">Excerpt</label>
                                     <textarea class="form-control" id="page_excerpt" name="page_excerpt" rows="3" placeholder="Short summary for listings">{{ page.excerpt or '' }}</textarea>
                                     <div class="form-text">Optional short summary used in blog listings and previews.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Featured Image</label>
+                                    {% if page.featured_png or page.featured_webp %}
+                                    <div class="mb-2">
+                                        <img src="{{ page.featured_png or page.featured_webp }}" alt="Featured" style="max-width: 240px; height: auto; border: 1px solid #ddd; border-radius: 4px;"/>
+                                    </div>
+                                    {% endif %}
+                                    <input class="form-control" type="file" name="featured_image" accept="image/*">
+                                    <div class="form-text">Upload a featured image. It will be resized and saved as PNG and WebP.</div>
                                 </div>
                             </div>
                         </div>
@@ -332,7 +346,7 @@
                     </div>
                     <div class="card-body">
                         <div class="small text-muted">
-                            Tips: Use <code>{{ "{{page:title}}" }}</code>, <code>{{ "{{page:excerpt}}" }}</code>, <code>{{ "{{blog:categories}}" }}</code>, <code>{{ "{{blog:category:[ID]}}" }}</code> in blocks to inject dynamic values.
+                            Tips: Use <code>{{ "{{page:title}}" }}</code>, <code>{{ "{{page:excerpt}}" }}</code>, <code>{{ "{{page:featured:png}}" }}</code>, <code>{{ "{{page:featured:webp}}" }}</code>, <code>{{ "{{blog:categories}}" }}</code>, <code>{{ "{{blog:category:[ID]}}" }}</code> in blocks to inject dynamic values.
                         </div>
                     </div>
                 </div>

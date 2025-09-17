@@ -144,6 +144,16 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add featured image columns to pages if missing
+    try:
+        cursor.execute('ALTER TABLE pages ADD COLUMN featured_png TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    try:
+        cursor.execute('ALTER TABLE pages ADD COLUMN featured_webp TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Page templates junction table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS page_templates (
