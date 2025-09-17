@@ -185,6 +185,19 @@ Block 5: "Normal content"         → Back to normal level</code></pre>
     </div>
   </div>
 
+  <h3 class="mt-4">Conditionals</h3>
+  <p>You can conditionally render content based on simple page fields:</p>
+  <div class="alert alert-light small">
+    <pre class="mb-0"><code>{{ "{{if page:featured}}" }}
+&lt;img src="{{ "{{page:featured:webp}}" }}" alt="{{ "{{page:title}}" }}"&gt;
+{{ "{{/if}}" }}</code></pre>
+    <ul class="mb-0">
+      <li><code>{{ "{{if page:featured}}" }}</code> — True when a featured image exists</li>
+      <li><code>{{ "{{if page:excerpt}}" }}</code> — True when an excerpt is set</li>
+      <li><code>{{ "{{if page:title}}" }}</code> — True when title is non-empty</li>
+    </ul>
+  </div>
+
   <div class="alert alert-info mt-3">
     <h6><strong>Features:</strong></h6>
     <ul class="mb-0">

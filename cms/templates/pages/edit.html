@@ -119,8 +119,12 @@
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Featured Image</label>
                                     {% if page.featured_png or page.featured_webp %}
-                                    <div class="mb-2">
-                                        <img src="{{ page.featured_png or page.featured_webp }}" alt="Featured" style="max-width: 240px; height: auto; border: 1px solid #ddd; border-radius: 4px;"/>
+                                    <div class="mb-2 d-flex align-items-center gap-2">
+                                        <img src="{{ (page.featured_png or page.featured_webp).replace('.png','-thumb.png').replace('.webp','-thumb.webp') }}" alt="Featured" style="max-width: 160px; height: auto; border: 1px solid #ddd; border-radius: 4px;"/>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="action" value="remove_featured">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove featured image?')">Remove</button>
+                                        </form>
                                     </div>
                                     {% endif %}
                                     <input class="form-control" type="file" name="featured_image" accept="image/*">
@@ -346,7 +350,8 @@
                     </div>
                     <div class="card-body">
                         <div class="small text-muted">
-                            Tips: Use <code>{{ "{{page:title}}" }}</code>, <code>{{ "{{page:excerpt}}" }}</code>, <code>{{ "{{page:featured:png}}" }}</code>, <code>{{ "{{page:featured:webp}}" }}</code>, <code>{{ "{{blog:categories}}" }}</code>, <code>{{ "{{blog:category:[ID]}}" }}</code> in blocks to inject dynamic values.
+                            Tips: Use <code>{{ "{{page:title}}" }}</code>, <code>{{ "{{page:excerpt}}" }}</code>, <code>{{ "{{page:featured:png}}" }}</code>, <code>{{ "{{page:featured:webp}}" }}</code>, <code>{{ "{{blog:categories}}" }}</code>, <code>{{ "{{blog:category:[ID]}}" }}</code>.
+                            Conditionals: <code>{{ "{{if page:featured}}...{{/if}}" }}</code>, <code>{{ "{{if page:excerpt}}...{{/if}}" }}</code>
                         </div>
                     </div>
                 </div>

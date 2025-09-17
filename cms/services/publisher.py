@@ -37,6 +37,30 @@ def generate_page_html(page_id, preview=False):
 
         content_out = raw_content
 
+        # First handle simple conditionals like {{if page:featured}}...{{/if}}
+        # Supported keys: page:featured, page:excerpt, page:title
+        import re as _re
+        def _evaluate_condition(key: str) -> bool:
+            key = key.strip().lower()
+            if key == 'page:featured':
+                return bool((page['featured_png'] or page['featured_webp']) if 'featured_png' in page.keys() or 'featured_webp' in page.keys() else False)
+            if key == 'page:excerpt':
+                return bool((page['excerpt'] or '').strip() if 'excerpt' in page.keys() else False)
+            if key == 'page:title':
+                return bool((page['title'] or '').strip())
+            return False
+
+        # Apply conditionals iteratively until none remain
+        pattern = _re.compile(r"\{\{\s*if\s+([^}]+)\s*\}\}(.*?)\{\{\s*/if\s*\}\}", _re.DOTALL | _re.IGNORECASE)
+        while True:
+            m = pattern.search(content_out)
+            if not m:
+                break
+            cond_key = m.group(1)
+            inner = m.group(2)
+            replacement = inner if _evaluate_condition(cond_key) else ''
+            content_out = content_out[:m.start()] + replacement + content_out[m.end():]
+
         # Page-level tokens
         # {{page:title}}
         content_out = content_out.replace('{{page:title}}', page['title'] or '')
@@ -73,7 +97,6 @@ def generate_page_html(page_id, preview=False):
 
         # {{blog:category:[id]}} -> UL of posts within category id
         # support also {{blog:category:id}}
-        import re as _re
         def _replace_category_posts(match):
             cat_id_raw = match.group(1) or ''
             cat_id = None
