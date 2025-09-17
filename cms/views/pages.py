@@ -1051,6 +1051,21 @@ def publish_page(page_id):
     if isinstance(result, str):  # Success case - filename returned
         cursor.execute('UPDATE pages SET published = 1 WHERE id = ?', (page_id,))
         db.commit()
+        # If this is a blog post, republish all blog container pages that are already published
+        try:
+            cursor.execute('SELECT type FROM pages WHERE id = ?', (page_id,))
+            row = cursor.fetchone()
+            page_type = row['type'] if row and 'type' in row.keys() else None
+            if page_type == 'blog':
+                cursor.execute('SELECT id FROM pages WHERE is_blog_container = 1 AND published = 1')
+                containers = cursor.fetchall()
+                for c in containers:
+                    try:
+                        generate_page_html(c['id'])
+                    except Exception:
+                        continue
+        except Exception:
+            pass
         flash('Page published successfully', 'success')
     else:  # Error case
         flash('Failed to publish page', 'error')
