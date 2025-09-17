@@ -91,7 +91,8 @@ def generate_page_html(page_id, preview=False):
                 return '<ul></ul>'
             items = []
             for r in posts:
-                href = f'/{r["slug"]}.html'
+                # Blog posts are published under /blog/slug.html
+                href = f'/blog/{r["slug"]}.html'
                 items.append(f'<li><a href="{href}">{r["title"]}</a></li>')
             return '<ul>' + ''.join(items) + '</ul>'
 
@@ -138,8 +139,14 @@ def generate_page_html(page_id, preview=False):
         return html_content
     else:
         # Save to file
-        os.makedirs(PUB_DIR, exist_ok=True)
-        filename = os.path.join(PUB_DIR, f'{page["slug"]}.html')
+        # Blog posts go under pub/blog/, other pages in pub/
+        if 'type' in page.keys() and page['type'] == 'blog':
+            out_dir = os.path.join(PUB_DIR, 'blog')
+            os.makedirs(out_dir, exist_ok=True)
+            filename = os.path.join(out_dir, f'{page["slug"]}.html')
+        else:
+            os.makedirs(PUB_DIR, exist_ok=True)
+            filename = os.path.join(PUB_DIR, f'{page["slug"]}.html')
 
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(html_content)
