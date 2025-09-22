@@ -429,7 +429,7 @@ def export_all_groups():
             g.id, g.title, g.slug, g.description, g.is_default, g.created_at, g.updated_at,
             g.is_default_page, g.is_default_blog,
             tgb.sort_order as block_sort_order,
-            d.id as block_id, d.title as block_title, d.slug as block_slug, d.category, d.content, d.default_parameters
+            d.id as block_id, d.title as block_title, d.slug as block_slug, d.category, d.content, d.default_parameters, d.sort_order as block_def_sort_order
         FROM template_groups g
         LEFT JOIN template_group_blocks tgb ON g.id = tgb.group_id
         LEFT JOIN page_template_defs d ON tgb.template_id = d.id
@@ -464,7 +464,8 @@ def export_all_groups():
                 'category': row['category'],
                 'content': row['content'] or '',
                 'default_parameters': row['default_parameters'] or '{}',
-                'sort_order': row['block_sort_order']
+                'sort_order': row['block_sort_order'],
+                'block_def_sort_order': row['block_def_sort_order']
             })
 
     # Convert to list
@@ -499,7 +500,7 @@ def export_selected_groups():
             g.id, g.title, g.slug, g.description, g.is_default, g.created_at, g.updated_at,
             g.is_default_page, g.is_default_blog,
             tgb.sort_order as block_sort_order,
-            d.id as block_id, d.title as block_title, d.slug as block_slug, d.category, d.content, d.default_parameters
+            d.id as block_id, d.title as block_title, d.slug as block_slug, d.category, d.content, d.default_parameters, d.sort_order as block_def_sort_order
         FROM template_groups g
         LEFT JOIN template_group_blocks tgb ON g.id = tgb.group_id
         LEFT JOIN page_template_defs d ON tgb.template_id = d.id
@@ -535,7 +536,8 @@ def export_selected_groups():
                 'category': row['category'],
                 'content': row['content'] or '',
                 'default_parameters': row['default_parameters'] or '{}',
-                'sort_order': row['block_sort_order']
+                'sort_order': row['block_sort_order'],
+                'block_def_sort_order': row['block_def_sort_order']
             })
 
     # Convert to list
@@ -605,6 +607,10 @@ def import_template_groups(import_data, overwrite_existing, cursor):
                     if existing_block:
                         # Use existing block
                         block_id = existing_block['id']
+                        # Update sort_order if provided in import data
+                        if 'block_def_sort_order' in block_data:
+                            cursor.execute('UPDATE page_template_defs SET sort_order = ? WHERE id = ?', 
+                                         (block_data['block_def_sort_order'], block_id))
                     else:
                         # Create new block
                         cursor.execute('''
@@ -616,7 +622,7 @@ def import_template_groups(import_data, overwrite_existing, cursor):
                             block_data.get('category', 'content'),
                             block_data.get('content', ''),
                             block_data.get('is_default', 0),  # Blocks in templates are typically not default
-                            0,  # Will be set by sort order in template
+                            block_data.get('block_def_sort_order', 0),  # Use imported sort_order
                             block_data.get('default_parameters', '{}')
                         ))
                         block_id = cursor.lastrowid
