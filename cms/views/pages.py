@@ -560,37 +560,47 @@ def add_page():
                     # Invalid JSON or empty parameters, skip
                     pass
         else:
-            # Fallback: add default blocks if no template group selected
-            cursor.execute("SELECT id, sort_order FROM page_template_defs WHERE is_default = 1 ORDER BY sort_order")
-            default_templates = cursor.fetchall()
-
-            for template in default_templates:
-                cursor.execute('SELECT title, default_parameters FROM page_template_defs WHERE id = ?', (template['id'],))
-                template_info = cursor.fetchone()
-                default_title = template_info['title'] if template_info else 'Untitled Block'
-                default_parameters_json = template_info['default_parameters'] if template_info else '{}'
-
+            # Fallback: add default template group if no template group selected
+            if default_type == 'blog':
+                cursor.execute("SELECT id FROM template_groups WHERE is_default_blog = 1 LIMIT 1")
+            else:
+                cursor.execute("SELECT id FROM template_groups WHERE is_default_page = 1 LIMIT 1")
+            
+            default_group = cursor.fetchone()
+            if default_group:
+                # Add blocks from the default template group
                 cursor.execute('''
-                    INSERT INTO page_templates (page_id, template_id, title, sort_order)
-                    VALUES (?, ?, ?, ?)
-                ''', (page_id, template['id'], default_title, template['sort_order']))
+                    SELECT d.id, d.title, d.default_parameters, tgb.sort_order
+                    FROM template_group_blocks tgb
+                    JOIN page_template_defs d ON d.id = tgb.template_id
+                    WHERE tgb.group_id = ?
+                    ORDER BY tgb.sort_order
+                ''', (default_group['id'],))
+                group_blocks = cursor.fetchall()
 
-                # Get the new page template ID
-                page_template_id = cursor.lastrowid
+                for block in group_blocks:
+                    # Insert block into page
+                    cursor.execute('''
+                        INSERT INTO page_templates (page_id, template_id, title, sort_order)
+                        VALUES (?, ?, ?, ?)
+                    ''', (page_id, block['id'], block['title'], block['sort_order']))
 
-                # Create default parameters if they exist
-                try:
-                    import json
-                    default_parameters = json.loads(default_parameters_json)
-                    if default_parameters:
-                        for param_name, param_value in default_parameters.items():
-                            cursor.execute('''
-                                INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
-                                VALUES (?, ?, ?)
-                            ''', (page_template_id, param_name, param_value))
-                except (json.JSONDecodeError, TypeError):
-                    # Invalid JSON or empty parameters, skip
-                    pass
+                    # Get the new page template ID
+                    page_template_id = cursor.lastrowid
+
+                    # Create default parameters if they exist
+                    try:
+                        import json
+                        default_parameters = json.loads(block['default_parameters'] or '{}')
+                        if default_parameters:
+                            for param_name, param_value in default_parameters.items():
+                                cursor.execute('''
+                                    INSERT INTO page_template_parameters (page_template_id, parameter_name, parameter_value)
+                                    VALUES (?, ?, ?)
+                                ''', (page_template_id, param_name, param_value))
+                    except (json.JSONDecodeError, TypeError):
+                        # Invalid JSON or empty parameters, skip
+                        pass
 
         db.commit()
         entity_label = 'Blog' if default_type == 'blog' else 'Page'

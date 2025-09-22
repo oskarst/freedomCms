@@ -41,6 +41,7 @@
                                     <th>Title</th>
                                     <th>Slug</th>
                                     <th>Description</th>
+                                    <th>Default</th>
                                     <th>Blocks</th>
                                     <th>Actions</th>
                                 </tr>
@@ -54,6 +55,17 @@
                                     <td>{{ g.title }}</td>
                                     <td><code>{{ g.slug }}</code></td>
                                     <td>{{ g.description or '-' }}</td>
+                                    <td>
+                                        {% if g.is_default_page %}
+                                        <span class="badge bg-info">Page</span>
+                                        {% endif %}
+                                        {% if g.is_default_blog %}
+                                        <span class="badge bg-warning">Blog</span>
+                                        {% endif %}
+                                        {% if not g.is_default_page and not g.is_default_blog %}
+                                        <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
                                     <td><span class="badge bg-secondary">{{ g.blocks_count }}</span></td>
                                     <td>
                                         <a href="{{ url_for('templates_.edit_template_group', group_id=g.id) }}" class="btn btn-sm btn-outline-primary">

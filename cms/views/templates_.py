@@ -172,6 +172,9 @@ def add_template_group():
         title = request.form.get('title', '').strip()
         slug_input = request.form.get('slug', '').strip()
         description = request.form.get('description', '').strip()
+        is_default_page = request.form.get('is_default_page') == 'on'
+        is_default_blog = request.form.get('is_default_blog') == 'on'
+        
         if not title:
             flash('Title is required', 'error')
             return redirect(url_for('templates_.add_template_group'))
@@ -183,8 +186,15 @@ def add_template_group():
         if cursor.fetchone():
             flash('Template with this slug already exists', 'error')
             return redirect(url_for('templates_.add_template_group'))
-        cursor.execute('INSERT INTO template_groups (title, slug, description) VALUES (?, ?, ?)',
-                       (title, slug_input, description))
+        
+        # If setting as default, ensure no other template is default for the same type
+        if is_default_page:
+            cursor.execute('UPDATE template_groups SET is_default_page = 0')
+        if is_default_blog:
+            cursor.execute('UPDATE template_groups SET is_default_blog = 0')
+        
+        cursor.execute('INSERT INTO template_groups (title, slug, description, is_default_page, is_default_blog) VALUES (?, ?, ?, ?, ?)',
+                       (title, slug_input, description, is_default_page, is_default_blog))
         db.commit()
         flash('Template created', 'success')
         return redirect(url_for('templates_.templates'))
@@ -211,6 +221,9 @@ def edit_template_group(group_id: int):
             title = request.form.get('title', '').strip()
             slug_input = request.form.get('slug', '').strip()
             description = request.form.get('description', '').strip()
+            is_default_page = request.form.get('is_default_page') == 'on'
+            is_default_blog = request.form.get('is_default_blog') == 'on'
+            
             if not title:
                 flash('Title is required', 'error')
                 return redirect(url_for('templates_.edit_template_group', group_id=group_id))
@@ -221,8 +234,15 @@ def edit_template_group(group_id: int):
             if cursor.fetchone():
                 flash('Another template with this slug exists', 'error')
                 return redirect(url_for('templates_.edit_template_group', group_id=group_id))
-            cursor.execute('UPDATE template_groups SET title = ?, slug = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                           (title, slug_input, description, group_id))
+            
+            # If setting as default, ensure no other template is default for the same type
+            if is_default_page:
+                cursor.execute('UPDATE template_groups SET is_default_page = 0')
+            if is_default_blog:
+                cursor.execute('UPDATE template_groups SET is_default_blog = 0')
+            
+            cursor.execute('UPDATE template_groups SET title = ?, slug = ?, description = ?, is_default_page = ?, is_default_blog = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                           (title, slug_input, description, is_default_page, is_default_blog, group_id))
             db.commit()
             flash('Template info updated', 'success')
             return redirect(url_for('templates_.edit_template_group', group_id=group_id))
@@ -407,6 +427,7 @@ def export_all_groups():
     cursor.execute('''
         SELECT
             g.id, g.title, g.slug, g.description, g.is_default, g.created_at, g.updated_at,
+            g.is_default_page, g.is_default_blog,
             tgb.sort_order as block_sort_order,
             d.id as block_id, d.title as block_title, d.slug as block_slug, d.category, d.content, d.default_parameters
         FROM template_groups g
@@ -428,6 +449,8 @@ def export_all_groups():
             'slug': row['slug'],
                 'description': row['description'],
             'is_default': row['is_default'],
+            'is_default_page': row['is_default_page'],
+            'is_default_blog': row['is_default_blog'],
             'created_at': row['created_at'],
             'updated_at': row['updated_at'],
                 'blocks': []
@@ -474,6 +497,7 @@ def export_selected_groups():
     cursor.execute(f'''
         SELECT
             g.id, g.title, g.slug, g.description, g.is_default, g.created_at, g.updated_at,
+            g.is_default_page, g.is_default_blog,
             tgb.sort_order as block_sort_order,
             d.id as block_id, d.title as block_title, d.slug as block_slug, d.category, d.content, d.default_parameters
         FROM template_groups g
@@ -496,6 +520,8 @@ def export_selected_groups():
             'slug': row['slug'],
                 'description': row['description'],
             'is_default': row['is_default'],
+            'is_default_page': row['is_default_page'],
+            'is_default_blog': row['is_default_blog'],
             'created_at': row['created_at'],
             'updated_at': row['updated_at'],
                 'blocks': []
@@ -546,15 +572,23 @@ def import_template_groups(import_data, overwrite_existing, cursor):
                 cursor.execute('DELETE FROM template_group_blocks WHERE group_id = ?', (template_id,))
                 cursor.execute('DELETE FROM template_groups WHERE id = ?', (template_id,))
 
+            # If setting as default, ensure no other template is default for the same type
+            if template_data.get('is_default_page'):
+                cursor.execute('UPDATE template_groups SET is_default_page = 0')
+            if template_data.get('is_default_blog'):
+                cursor.execute('UPDATE template_groups SET is_default_blog = 0')
+
             # Insert template group
             cursor.execute('''
-                INSERT INTO template_groups (title, slug, description, is_default)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO template_groups (title, slug, description, is_default, is_default_page, is_default_blog)
+                VALUES (?, ?, ?, ?, ?, ?)
             ''', (
                 template_data.get('title') or slug,
                 slug,
                 template_data.get('description', ''),
-                template_data.get('is_default', 0)
+                template_data.get('is_default', 0),
+                template_data.get('is_default_page', 0),
+                template_data.get('is_default_blog', 0)
             ))
 
             new_group_id = cursor.lastrowid

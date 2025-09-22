@@ -154,6 +154,16 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add default template columns to template_groups if missing
+    try:
+        cursor.execute('ALTER TABLE template_groups ADD COLUMN is_default_page BOOLEAN DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    try:
+        cursor.execute('ALTER TABLE template_groups ADD COLUMN is_default_blog BOOLEAN DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Page templates junction table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS page_templates (

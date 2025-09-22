@@ -35,6 +35,27 @@
                             <label for="description" class="form-label">Description</label>
                             <textarea class="form-control" id="description" name="description" rows="3">{{ group.description }}</textarea>
                         </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="is_default_page" name="is_default_page" {{ 'checked' if group.is_default_page else '' }}>
+                                <label class="form-check-label" for="is_default_page">
+                                    Default Page Template
+                                </label>
+                            </div>
+                            <div class="form-text">If checked, this template will be preselected when creating new pages</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="is_default_blog" name="is_default_blog" {{ 'checked' if group.is_default_blog else '' }}>
+                                <label class="form-check-label" for="is_default_blog">
+                                    Default Blog Template
+                                </label>
+                            </div>
+                            <div class="form-text">If checked, this template will be preselected when creating new blog posts</div>
+                        </div>
+
                         <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save</button>
                     </form>
                 </div>
