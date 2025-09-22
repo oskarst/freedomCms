@@ -15,6 +15,8 @@ A simple, one-file Flask-based Content Management System with Bootstrap UI and S
 - **Page Duplication**: Duplicate existing pages with all content and templates
 - **CMS Block Indentation**: Visual indentation system based on CMS tags
 - **Parameter Types**: Support for different parameter types (text, code, wysiwyg)
+- **Dynamic Shortcodes**: Built-in shortcodes for page data, blog content, and site configuration
+- **Base URL Configuration**: Configurable site base URL for absolute links and SEO
 
 ## Installation
 
@@ -71,6 +73,8 @@ The CMS provides **smart template management** with override tracking:
 - ✅ **Drag and Drop Reordering**: Sort page blocks by dragging with visual feedback
 - ✅ **CMS Block Indentation**: Visual indentation system based on CMS tags
 - ✅ **Parameter Types**: Support for different input types (text, code, wysiwyg)
+- ✅ **Dynamic Shortcodes**: Built-in shortcodes for page data, blog content, and site configuration
+- ✅ **Base URL Configuration**: Configurable site base URL for absolute links and SEO
 
 ## Generated Pages Features
 
@@ -226,6 +230,56 @@ Template Content:
 - **Enhanced Editing**: WYSIWYG parameters have improved styling and min-height
 - **Backward Compatibility**: Existing parameters without types default to plain text
 
+### Dynamic Shortcodes System
+Built-in shortcodes for dynamic content generation:
+
+#### Page Tokens
+- `{{page:title}}` - Current page title
+- `{{page:excerpt}}` - Current page excerpt (for blog pages)
+- `{{page:featured:png}}` - Featured PNG image URL
+- `{{page:featured:webp}}` - Featured WebP image URL
+
+#### Blog Tokens
+- `{{blog:categories}}` - Unordered list of all blog categories with links
+- `{{blog:latest}}` - Unordered list of all published blog posts (newest first) with title, excerpt, and links to `/blog/slug.html`
+- `{{blog:category:123}}` - Unordered list of blog posts in category ID 123
+- `{{blog:category:[123]}}` - Same as above with bracket syntax
+
+#### Config Tokens
+- `{{config:base_url}}` - Site base URL from settings (e.g., https://example.com)
+
+#### Conditional Tokens
+- `{{if page:featured}}...{{/if}}` - Show content if featured image exists
+- `{{if page:excerpt}}...{{/if}}` - Show content if excerpt is set
+- `{{if page:title}}...{{/if}}` - Show content if title is non-empty
+
+#### Usage Examples
+```html
+<!-- Canonical URL -->
+<link rel="canonical" href="{{config:base_url}}/{{page:slug}}.html">
+
+<!-- Open Graph URL -->
+<meta property="og:url" content="{{config:base_url}}/{{page:slug}}.html">
+
+<!-- Featured image with conditional -->
+{{if page:featured}}
+<img src="{{page:featured:webp}}" alt="{{page:title}}">
+{{/if}}
+
+<!-- Latest blog posts -->
+{{blog:latest}}
+
+<!-- Blog categories -->
+{{blog:categories}}
+```
+
+#### Features
+- **Automatic Replacement**: All shortcodes are processed during page publishing
+- **SEO Ready**: Perfect for canonical URLs, Open Graph tags, and structured data
+- **Blog Integration**: Built-in support for blog post listings and categories
+- **Configurable**: Base URL can be set in Admin → Settings
+- **CSS Classes**: Generated lists include CSS classes for styling (`blog-latest`, `blog-latest-item`)
+
 ### JSON Structure
 ```json
 [
@@ -269,9 +323,23 @@ Template Content:
 ### First Time Setup
 
 1. **Login**: Use the default admin credentials
-2. **Settings**: Update site name, description, and other settings
+2. **Settings**: Update site name, description, base URL, and other settings
 3. **Templates**: Review and customize the default template blocks
 4. **Users**: Create additional admin users if needed
+
+### Base URL Configuration
+
+Configure your site's base URL for proper SEO and absolute links:
+
+1. **Go to Settings**: Admin → Settings
+2. **Set Base URL**: Enter your site's base URL (e.g., `https://example.com`)
+3. **Use in Templates**: Use `{{config:base_url}}` shortcode in templates for:
+   - Canonical URLs: `<link rel="canonical" href="{{config:base_url}}/{{page:slug}}.html">`
+   - Open Graph tags: `<meta property="og:url" content="{{config:base_url}}/{{page:slug}}.html">`
+   - Absolute links: `<a href="{{config:base_url}}/contact.html">Contact</a>`
+
+**Default**: `http://localhost:5000` (for development)
+**Production**: Set to your actual domain (e.g., `https://example.com`)
 
 ### Creating Pages
 
@@ -303,6 +371,27 @@ Template Content:
 1. **Preview**: Click "Preview" to see how the page will look
 2. **Publish**: Click "Publish" to generate static HTML in the `pub/` directory
 3. **Access**: Published pages are available as static HTML files
+
+### Blog Functionality
+
+The CMS includes built-in blog support:
+
+#### Creating Blog Posts
+1. **Add Blog Post**: Go to Pages → Add Page → Select "Blog" type
+2. **Set Properties**: Add title, slug, excerpt, and featured image
+3. **Assign Categories**: Select blog categories for organization
+4. **Publish**: Blog posts are published to `/blog/slug.html`
+
+#### Blog Categories
+1. **Manage Categories**: Go to Pages → Blog → Manage categories
+2. **Add Categories**: Create categories for organizing blog posts
+3. **Assign Posts**: Assign blog posts to categories during editing
+
+#### Blog Shortcodes
+Use these shortcodes in templates for dynamic blog content:
+- `{{blog:latest}}` - List of all published blog posts (newest first)
+- `{{blog:categories}}` - List of all blog categories with links
+- `{{blog:category:123}}` - List of posts in specific category
 
 ### Template Management
 
@@ -343,28 +432,39 @@ The CMS comes with pre-configured template blocks:
 7. **Paragraph** - Text content block
 8. **Footer** - Site footer
 
-## Template Variables
+## Template Variables & Shortcodes
 
-The following variables are automatically replaced in templates:
+The CMS supports both custom parameters and built-in shortcodes:
 
-- `{{ page_title }}` - Current page title
-- `{{ site_name }}` - Site name from settings
-- `{{ site_description }}` - Site description from settings
-- `{{ hero_title }}` - Hero section title
-- `{{ hero_subtitle }}` - Hero section subtitle
-- `{{ section_title }}` - Content section title
-- `{{ section_content }}` - Section content
-- `{{ paragraph_content }}` - Paragraph text
-- `{{ menu_content }}` - Navigation menu content
-
-### Parameter Types
-
-Template parameters can now have different types for enhanced editing:
-
+### Custom Parameters
+Template parameters are user-defined and can have different types:
 - `{{ parameter_name }}` - Plain text input (default)
 - `{{ parameter_name:text }}` - Plain text input (explicit)
 - `{{ parameter_name:code }}` - Code editor with syntax highlighting
 - `{{ parameter_name:wysiwyg }}` - WYSIWYG editor (enhanced textarea)
+
+### Built-in Shortcodes
+These shortcodes are automatically processed during page publishing:
+
+#### Page Data
+- `{{page:title}}` - Current page title
+- `{{page:excerpt}}` - Current page excerpt (for blog pages)
+- `{{page:featured:png}}` - Featured PNG image URL
+- `{{page:featured:webp}}` - Featured WebP image URL
+
+#### Blog Content
+- `{{blog:categories}}` - Unordered list of all blog categories with links
+- `{{blog:latest}}` - Unordered list of all published blog posts (newest first)
+- `{{blog:category:123}}` - Unordered list of blog posts in category ID 123
+
+#### Site Configuration
+- `{{config:base_url}}` - Site base URL from settings
+
+#### Conditional Content
+- `{{if page:featured}}...{{/if}}` - Show content if featured image exists
+- `{{if page:excerpt}}...{{/if}}` - Show content if excerpt is set
+- `{{if page:title}}...{{/if}}` - Show content if title is non-empty
+
 
 ### CMS Block Indentation Tags
 
@@ -391,10 +491,14 @@ Block 3: "Footer </cms:hero>"     -> Closes hero section
 The SQLite database includes these tables:
 
 - `users` - Admin users
-- `settings` - CMS configuration
-- `templates` - Template blocks
-- `pages` - Page definitions
+- `settings` - CMS configuration (site_name, base_url, admin_theme, etc.)
+- `page_template_defs` - Template block definitions
+- `pages` - Page definitions (supports both 'page' and 'blog' types)
 - `page_templates` - Many-to-many relationship between pages and templates
+- `page_template_parameters` - Custom parameters for page templates
+- `blog_categories` - Blog category definitions
+- `page_blog_categories` - Many-to-many relationship between pages and blog categories
+- `media` - Media file metadata and paths
 
 ## Customization
 
