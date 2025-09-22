@@ -109,7 +109,7 @@ def generate_page_html(page_id, preview=False):
             if cats:
                 items = []
                 for c in cats:
-                    href = f'/{container_slug}.html?category={c["slug"]}'
+                    href = f'{base_url}/{container_slug}.html?category={c["slug"]}'
                     items.append(f'<li><a href="{href}">{c["title"]}</a></li>')
                 html = '<ul>' + ''.join(items) + '</ul>'
             else:
@@ -135,7 +135,7 @@ def generate_page_html(page_id, preview=False):
             if posts:
                 items = []
                 for r in posts:
-                    href = f'/blog/{r["slug"]}.html'
+                    href = f'{base_url}/blog/{r["slug"]}.html'
                     title = r['title'] or r['slug']
                     excerpt = (r['excerpt'] or '').strip() if 'excerpt' in r.keys() else ''
                     
@@ -198,7 +198,7 @@ def generate_page_html(page_id, preview=False):
             items = []
             for r in posts:
                 # Blog posts are published under /blog/slug.html
-                href = f'/blog/{r["slug"]}.html'
+                href = f'{base_url}/blog/{r["slug"]}.html'
                 items.append(f'<li><a href="{href}">{r["title"]}</a></li>')
             return '<ul>' + ''.join(items) + '</ul>'
 
