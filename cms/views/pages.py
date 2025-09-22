@@ -810,7 +810,17 @@ def edit_page(page_id):
             else:
                 flash('Invalid template ID', 'error')
 
-        return redirect(url_for('pages.edit_page', page_id=page_id))
+        # Redirect based on action and page type
+        if action == 'save':
+            # After saving, redirect to appropriate pages list based on page type
+            page_type = page['type'] if 'type' in page.keys() else 'page'
+            if page_type == 'blog':
+                return redirect(url_for('pages.pages', type='blog'))
+            else:
+                return redirect(url_for('pages.pages', type='page'))
+        else:
+            # For other actions (add_template, remove_template, toggle_mode), stay on edit page
+            return redirect(url_for('pages.edit_page', page_id=page_id))
 
     # Only ensure default templates are present if this is a new page with no templates
     cursor.execute('SELECT COUNT(*) as count FROM page_templates WHERE page_id = ?', (page_id,))
