@@ -280,6 +280,7 @@ def init_db():
     default_settings = [
         ('site_name', 'Devall CMS', 'Site name displayed in admin'),
         ('site_description', 'A simple Flask CMS', 'Site description'),
+        ('base_url', 'http://localhost:5000', 'Base URL for the site (used in {{config:base_url}} shortcode)'),
         ('admin_theme', 'light', 'Admin theme (light/dark)'),
         ('hide_system_blocks', '1', 'Hide system template blocks by default in page editor'),
         ('media_small_width', '320', 'Media small width (px)'),

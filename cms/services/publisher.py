@@ -70,6 +70,14 @@ def generate_page_html(page_id, preview=False):
         content_out = content_out.replace('{{page:featured:png}}', (page['featured_png'] or '') if 'featured_png' in page.keys() else '')
         content_out = content_out.replace('{{page:featured:webp}}', (page['featured_webp'] or '') if 'featured_webp' in page.keys() else '')
 
+        # Config tokens
+        # {{config:base_url}}
+        if '{{config:base_url}}' in content_out:
+            cursor.execute('SELECT value FROM settings WHERE key = ?', ('base_url',))
+            row = cursor.fetchone()
+            base_url = row['value'] if row and 'value' in row.keys() else 'http://localhost:5000'
+            content_out = content_out.replace('{{config:base_url}}', base_url)
+
         # Blog tokens
         # {{blog:categories}} -> UL of categories with links to blog container page
         if '{{blog:categories}}' in content_out:
