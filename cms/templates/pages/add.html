@@ -39,7 +39,7 @@
                             <select class="form-select" id="template_group_id" name="template_group_id">
                                 <option value="">-- Use Default Blocks --</option>
                                 {% for group in template_groups %}
-                                <option value="{{ group.id }}">{{ group.title }}</option>
+                                <option value="{{ group.id }}" {% if group.id == default_template_id %}selected{% endif %}>{{ group.title }}</option>
                                 {% endfor %}
                             </select>
                             <div class="form-text">Choose a template to populate the page with its blocks, or leave empty for default blocks</div>

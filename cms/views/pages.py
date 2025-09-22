@@ -610,8 +610,21 @@ def add_page():
     # Load available template groups
     cursor.execute('SELECT id, title FROM template_groups ORDER BY title')
     template_groups = cursor.fetchall()
+    
+    # Find the default template group for preselection
+    default_template_id = None
+    if default_type == 'blog':
+        cursor.execute('SELECT id FROM template_groups WHERE is_default_blog = 1 LIMIT 1')
+        default_template = cursor.fetchone()
+        if default_template:
+            default_template_id = default_template['id']
+    else:
+        cursor.execute('SELECT id FROM template_groups WHERE is_default_page = 1 LIMIT 1')
+        default_template = cursor.fetchone()
+        if default_template:
+            default_template_id = default_template['id']
 
-    return render_template('pages/add.html', template_groups=template_groups, page_type=default_type)
+    return render_template('pages/add.html', template_groups=template_groups, page_type=default_type, default_template_id=default_template_id)
 
 @bp.route('/pages/<int:page_id>/edit', methods=['GET', 'POST'])
 @login_required
