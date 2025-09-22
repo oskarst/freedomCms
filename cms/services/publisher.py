@@ -67,8 +67,20 @@ def generate_page_html(page_id, preview=False):
         # {{page:excerpt}}
         content_out = content_out.replace('{{page:excerpt}}', (page['excerpt'] or '') if 'excerpt' in page.keys() else '')
         # {{page:featured:png}} and {{page:featured:webp}}
-        content_out = content_out.replace('{{page:featured:png}}', (page['featured_png'] or '') if 'featured_png' in page.keys() else '')
-        content_out = content_out.replace('{{page:featured:webp}}', (page['featured_webp'] or '') if 'featured_webp' in page.keys() else '')
+        featured_png_url = ''
+        featured_webp_url = ''
+        if 'featured_png' in page.keys() and page['featured_png']:
+            featured_png_url = page['featured_png']
+        if 'featured_webp' in page.keys() and page['featured_webp']:
+            featured_webp_url = page['featured_webp']
+        
+        # Get base_url from settings to prepend to featured image URLs
+        cursor.execute('SELECT value FROM settings WHERE key = ?', ('base_url',))
+        base_url_row = cursor.fetchone()
+        base_url = base_url_row['value'] if base_url_row else 'http://localhost:5000'
+        
+        content_out = content_out.replace('{{page:featured:png}}', f"{base_url}{featured_png_url}")
+        content_out = content_out.replace('{{page:featured:webp}}', f"{base_url}{featured_webp_url}")
 
         # Config tokens
         # {{config:base_url}}

@@ -640,6 +640,47 @@ def edit_page(page_id):
             flash(f'Switched to {new_mode.title()} mode', 'success')
             return redirect(url_for('pages.edit_page', page_id=page_id))
 
+        elif action == 'remove_featured':
+            # Remove featured image from blog post
+            page_type = page['type'] if 'type' in page.keys() else 'page'
+            if page_type == 'blog':
+                # Get current featured image paths to delete files
+                current_png = page['featured_png'] if 'featured_png' in page.keys() else None
+                current_webp = page['featured_webp'] if 'featured_webp' in page.keys() else None
+                
+                # Remove featured image paths from database
+                cursor.execute('UPDATE pages SET featured_png = NULL, featured_webp = NULL WHERE id = ?', (page_id,))
+                
+                # Delete image files if they exist (both full size and thumbnails)
+                if current_png or current_webp:
+                    try:
+                        import os
+                        from ..db import PUB_DIR
+                        if current_png:
+                            # Delete full size PNG
+                            png_file = os.path.join(PUB_DIR, current_png.lstrip('/'))
+                            if os.path.exists(png_file):
+                                os.remove(png_file)
+                            # Delete thumbnail PNG
+                            thumb_png_file = png_file.replace('.png', '-thumb.png')
+                            if os.path.exists(thumb_png_file):
+                                os.remove(thumb_png_file)
+                        if current_webp:
+                            # Delete full size WebP
+                            webp_file = os.path.join(PUB_DIR, current_webp.lstrip('/'))
+                            if os.path.exists(webp_file):
+                                os.remove(webp_file)
+                            # Delete thumbnail WebP
+                            thumb_webp_file = webp_file.replace('.webp', '-thumb.webp')
+                            if os.path.exists(thumb_webp_file):
+                                os.remove(thumb_webp_file)
+                    except Exception:
+                        pass  # Ignore file deletion errors
+                
+                db.commit()
+                flash('Featured image removed successfully', 'success')
+            return redirect(url_for('pages.edit_page', page_id=page_id))
+
         elif action == 'save':
             # Update page title and slug
             page_title = request.form.get('page_title', '').strip()
@@ -667,25 +708,41 @@ def edit_page(page_id):
             featured_png = None
             featured_webp = None
             try:
-                if (page.get('type') == 'blog' or ('type' in page.keys() and page['type'] == 'blog')) and 'featured_image' in request.files:
+                page_type = page['type'] if 'type' in page.keys() else 'page'
+                if page_type == 'blog' and 'featured_image' in request.files:
                     file = request.files.get('featured_image')
                     if file and file.filename:
                         from PIL import Image
                         import uuid, os
                         from ..db import PUB_DIR
                         img = Image.open(file.stream).convert('RGB')
-                        img.thumbnail((1600, 1600))
+                        
+                        # Create unique filename
                         unique = f"featured-{uuid.uuid4().hex[:10]}"
                         out_dir = os.path.join(PUB_DIR, 'blog')
                         os.makedirs(out_dir, exist_ok=True)
+                        
+                        # Save full size images (max 1600x1600)
+                        full_img = img.copy()
+                        full_img.thumbnail((1600, 1600))
                         png_path = os.path.join(out_dir, f"{unique}.png")
                         webp_path = os.path.join(out_dir, f"{unique}.webp")
-                        img.save(png_path, format='PNG', optimize=True)
-                        img.save(webp_path, format='WEBP', quality=85, method=6)
+                        full_img.save(png_path, format='PNG', optimize=True)
+                        full_img.save(webp_path, format='WEBP', quality=85, method=6)
+                        
+                        # Generate thumbnail (max 300x300)
+                        thumb_img = img.copy()
+                        thumb_img.thumbnail((300, 300))
+                        thumb_png_path = os.path.join(out_dir, f"{unique}-thumb.png")
+                        thumb_webp_path = os.path.join(out_dir, f"{unique}-thumb.webp")
+                        thumb_img.save(thumb_png_path, format='PNG', optimize=True)
+                        thumb_img.save(thumb_webp_path, format='WEBP', quality=85, method=6)
+                        
                         featured_png = f"/blog/{unique}.png"
                         featured_webp = f"/blog/{unique}.webp"
-            except Exception:
-                pass
+                        flash(f'Featured image uploaded successfully: {unique}', 'success')
+            except Exception as e:
+                flash(f'Failed to upload featured image: {str(e)}', 'error')
 
             # Update page title, slug, blog container flag, excerpt and featured image paths
             if featured_png or featured_webp:
@@ -710,9 +767,13 @@ def edit_page(page_id):
                 # In Simple mode, preserve existing content and only update parameters
                 current_page_mode = page['mode'] if 'mode' in page.keys() else 'simple'
                 if current_page_mode == 'simple':
-                    # In Simple mode, don't update the page_templates table at all
-                    # Only update parameters (handled below)
-                    pass
+                    # In Simple mode, ensure use_default is set to 1 if no custom content
+                    if not custom_content.strip():
+                        cursor.execute('UPDATE page_templates SET title = ?, use_default = 1, sort_order = ? WHERE id = ?',
+                                     (custom_title, sort_order, pt['id']))
+                    else:
+                        cursor.execute('UPDATE page_templates SET title = ?, custom_content = ?, use_default = 0, sort_order = ? WHERE id = ?',
+                                     (custom_title, custom_content, sort_order, pt['id']))
                 else:
                     # Advanced mode: update everything
                     if use_default:
@@ -917,7 +978,12 @@ def edit_page(page_id):
         cursor.execute('SELECT category_id FROM page_blog_categories WHERE page_id = ?', (page_id,))
         selected_categories = [row['category_id'] for row in cursor.fetchall()]
 
-    return render_template('pages/edit.html', page=page, page_templates=page_templates, available_templates=available_templates, page_template_label=page_template_label, blog_categories=blog_categories, selected_categories=selected_categories)
+    # Get base_url from settings
+    cursor.execute('SELECT value FROM settings WHERE key = ?', ('base_url',))
+    base_url_row = cursor.fetchone()
+    base_url = base_url_row['value'] if base_url_row else 'http://localhost:5000'
+
+    return render_template('pages/edit.html', page=page, page_templates=page_templates, available_templates=available_templates, page_template_label=page_template_label, blog_categories=blog_categories, selected_categories=selected_categories, base_url=base_url)
 
 @bp.route('/pages/<int:page_id>/delete', methods=['POST'])
 @login_required

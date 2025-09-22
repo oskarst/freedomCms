@@ -119,16 +119,65 @@
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Featured Image</label>
                                     {% if page.featured_png or page.featured_webp %}
-                                    <div class="mb-2 d-flex align-items-center gap-2">
-                                        <img src="{{ (page.featured_png or page.featured_webp).replace('.png','-thumb.png').replace('.webp','-thumb.webp') }}" alt="Featured" style="max-width: 160px; height: auto; border: 1px solid #ddd; border-radius: 4px;"/>
-                                        <form method="post" class="d-inline">
-                                            <input type="hidden" name="action" value="remove_featured">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove featured image?')">Remove</button>
-                                        </form>
+                                    <div class="mb-3">
+                                        <!-- Thumbnail Display -->
+                                        <div class="mb-2">
+                                            <img src="{{ base_url }}{{ (page.featured_png or page.featured_webp).replace('.png','-thumb.png').replace('.webp','-thumb.webp') }}" alt="Featured" style="max-width: 200px; height: auto; border: 1px solid #ddd; border-radius: 4px;"/>
+                                        </div>
+                                        
+                                        <!-- Copy URL Buttons -->
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Image URLs:</label>
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text">PNG</span>
+                                                        <input type="text" class="form-control font-monospace small" value="{{ base_url }}{{ page.featured_png or '' }}" readonly id="featured-png-url">
+                                                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('featured-png-url')" title="Copy PNG URL">
+                                                            <i class="bi bi-clipboard"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text">WebP</span>
+                                                        <input type="text" class="form-control font-monospace small" value="{{ base_url }}{{ page.featured_webp or '' }}" readonly id="featured-webp-url">
+                                                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('featured-webp-url')" title="Copy WebP URL">
+                                                            <i class="bi bi-clipboard"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text">Thumb PNG</span>
+                                                        <input type="text" class="form-control font-monospace small" value="{{ base_url }}{{ (page.featured_png or page.featured_webp).replace('.png','-thumb.png').replace('.webp','-thumb.webp') }}" readonly id="featured-thumb-png-url">
+                                                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('featured-thumb-png-url')" title="Copy Thumbnail PNG URL">
+                                                            <i class="bi bi-clipboard"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text">Thumb WebP</span>
+                                                        <input type="text" class="form-control font-monospace small" value="{{ base_url }}{{ (page.featured_png or page.featured_webp).replace('.png','-thumb.png').replace('.webp','-thumb.webp') }}" readonly id="featured-thumb-webp-url">
+                                                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('featured-thumb-webp-url')" title="Copy Thumbnail WebP URL">
+                                                            <i class="bi bi-clipboard"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Remove Button -->
+                                        <div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFeaturedImage()">
+                                                <i class="bi bi-trash"></i> Remove Featured Image
+                                            </button>
+                                        </div>
                                     </div>
                                     {% endif %}
                                     <input class="form-control" type="file" name="featured_image" accept="image/*">
-                                    <div class="form-text">Upload a featured image. It will be resized and saved as PNG and WebP.</div>
+                                    <div class="form-text">Upload a featured image. It will be resized to 1600x1600px and 300x300px thumbnail, saved as PNG and WebP formats.</div>
                                 </div>
                             </div>
                         </div>
@@ -1380,5 +1429,86 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// Remove featured image function
+function removeFeaturedImage() {
+    if (confirm('Remove featured image? This action cannot be undone.')) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = window.location.href;
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'remove_featured';
+        
+        form.appendChild(actionInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Copy to clipboard function for featured image URLs
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    const text = element.value;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        // Use modern clipboard API
+        navigator.clipboard.writeText(text).then(function() {
+            showCopySuccess(element);
+        }).catch(function() {
+            fallbackCopyTextToClipboard(text, element);
+        });
+    } else {
+        // Fallback for older browsers
+        fallbackCopyTextToClipboard(text, element);
+    }
+}
+
+function fallbackCopyTextToClipboard(text, element) {
+    element.select();
+    element.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showCopySuccess(element);
+        } else {
+            showCopyError(element);
+        }
+    } catch (err) {
+        showCopyError(element);
+    }
+}
+
+function showCopySuccess(element) {
+    const button = element.nextElementSibling;
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-check"></i>';
+    button.classList.remove('btn-outline-secondary');
+    button.classList.add('btn-success');
+    
+    setTimeout(function() {
+        button.innerHTML = originalHTML;
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-secondary');
+    }, 1500);
+}
+
+function showCopyError(element) {
+    const button = element.nextElementSibling;
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-x"></i>';
+    button.classList.remove('btn-outline-secondary');
+    button.classList.add('btn-danger');
+    
+    setTimeout(function() {
+        button.innerHTML = originalHTML;
+        button.classList.remove('btn-danger');
+        button.classList.add('btn-outline-secondary');
+    }, 1500);
+}
 </script>
 {% endblock %}
