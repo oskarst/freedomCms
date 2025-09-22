@@ -95,6 +95,32 @@ def generate_page_html(page_id, preview=False):
                 html = '<ul></ul>'
             content_out = content_out.replace('{{blog:categories}}', html)
 
+        # {{blog:latest}} -> UL of all published blog posts ordered by date (newest first)
+        if '{{blog:latest}}' in content_out:
+            cursor.execute(
+                """
+                SELECT title, slug, excerpt
+                FROM pages
+                WHERE type = 'blog' AND published = 1
+                ORDER BY created_at DESC
+                """
+            )
+            posts = cursor.fetchall()
+            if posts:
+                items = []
+                for r in posts:
+                    href = f'/blog/{r["slug"]}.html'
+                    title = r['title'] or r['slug']
+                    excerpt = (r['excerpt'] or '').strip() if 'excerpt' in r.keys() else ''
+                    if excerpt:
+                        items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a><div class="excerpt">{excerpt}</div></li>')
+                    else:
+                        items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a></li>')
+                html = '<ul class="blog-latest">' + ''.join(items) + '</ul>'
+            else:
+                html = '<ul class="blog-latest"></ul>'
+            content_out = content_out.replace('{{blog:latest}}', html)
+
         # {{blog:category:[id]}} -> UL of posts within category id
         # support also {{blog:category:id}}
         def _replace_category_posts(match):
