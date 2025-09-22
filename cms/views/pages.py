@@ -184,7 +184,9 @@ def pages():
             else:
                 flash('Please select a valid JSON file', 'error')
 
-            return redirect(url_for('pages.pages'))
+            # Preserve the current page type context after import
+            current_type = request.args.get('type', 'page')
+            return redirect(url_for('pages.pages', type=current_type))
 
     # Filter by page type (defaults to 'page')
     page_type = request.args.get('type') or 'page'
@@ -1102,7 +1104,9 @@ def publish_page(page_id):
 
     # If publish came from the list view, stay on list; otherwise go back to edit
     if request.form.get('from_list') == '1':
-        return redirect(url_for('pages.pages'))
+        # Preserve the current page type context after publishing
+        current_type = request.form.get('page_type', 'page')
+        return redirect(url_for('pages.pages', type=current_type))
     return redirect(url_for('pages.edit_page', page_id=page_id))
 
 @bp.route('/pages/republish-all', methods=['POST'])
@@ -1122,7 +1126,7 @@ def republish_all_pages():
     
     if not published_pages:
         flash('No published pages found to republish', 'warning')
-        return redirect(url_for('pages.pages'))
+        return redirect(url_for('pages.pages', type=page_type))
     
     republished_count = 0
     errors = []
@@ -1141,4 +1145,4 @@ def republish_all_pages():
         label = 'blogs' if page_type == 'blog' else 'pages'
         flash(f'Successfully republished {republished_count} {label}', 'success')
     
-    return redirect(url_for('pages.pages'))
+    return redirect(url_for('pages.pages', type=page_type))

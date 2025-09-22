@@ -126,6 +126,7 @@
                                         {% if page.published %}
                                         <form method="post" action="{{ url_for('pages.publish_page', page_id=page.id) }}" class="d-inline">
                                             <input type="hidden" name="from_list" value="1">
+                                            <input type="hidden" name="page_type" value="{{ page_type }}">
                                             <input type="hidden" name="action" value="publish">
                                             <button type="submit" class="btn btn-sm btn-outline-success">
                                                 <i class="bi bi-upload"></i> Re-publish
@@ -134,6 +135,7 @@
                                         {% else %}
                                         <form method="post" action="{{ url_for('pages.publish_page', page_id=page.id) }}" class="d-inline">
                                             <input type="hidden" name="from_list" value="1">
+                                            <input type="hidden" name="page_type" value="{{ page_type }}">
                                             <input type="hidden" name="action" value="publish">
                                             <button type="submit" class="btn btn-sm btn-outline-success">
                                                 <i class="bi bi-upload"></i> Publish
