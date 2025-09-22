@@ -183,7 +183,7 @@ Block 5: "Normal content"         → Back to normal level</code></pre>
         <div class="card-body">
           <table class="table table-sm">
             <tr><td><code>{{ "{{blog:categories}}" }}</code></td><td>All blog categories list</td></tr>
-            <tr><td><code>{{ "{{blog:latest}}" }}</code></td><td>Latest published posts</td></tr>
+            <tr><td><code>{{ "{{blog:latest}}" }}</code></td><td>Latest published posts with featured images</td></tr>
             <tr><td><code>{{ "{{blog:category:123}}" }}</code></td><td>Posts in category ID 123</td></tr>
             <tr><td><code>{{ "{{blog:category:[123]}}" }}</code></td><td>Posts in category ID 123 (bracket syntax)</td></tr>
           </table>
@@ -247,7 +247,7 @@ Block 5: "Normal content"         → Back to normal level</code></pre>
           <h6 class="card-title">Blog Tokens</h6>
           <ul class="small">
             <li><code>{{ "{{blog:categories}}" }}</code> — Unordered list of all blog categories, each linked to the blog container page</li>
-            <li><code>{{ "{{blog:latest}}" }}</code> — Unordered list of all published blog posts ordered by date (newest first), with title, excerpt, and links to /blog/slug.html</li>
+            <li><code>{{ "{{blog:latest}}" }}</code> — Unordered list of all published blog posts ordered by date (newest first), with featured images (if available), title, excerpt, and links to /blog/slug.html</li>
             <li><code>{{ "{{blog:category:[123]}}" }}</code> or <code>{{ "{{blog:category:123}}" }}</code> — Unordered list of blog posts in category ID 123</li>
           </ul>
         </div>
@@ -292,12 +292,13 @@ Block 5: "Normal content"         → Back to normal level</code></pre>
   </div>
 
   <h3 class="mt-4">Blog Latest Shortcode Example</h3>
-  <p>The <code>{{ "{{blog:latest}}" }}</code> shortcode generates a complete unordered list of all published blog posts:</p>
+  <p>The <code>{{ "{{blog:latest}}" }}</code> shortcode generates a complete unordered list of all published blog posts with featured images when available:</p>
   
   <div class="alert alert-light">
     <h6><strong>Generated HTML Structure:</strong></h6>
     <pre class="mb-0"><code>&lt;ul class="blog-latest"&gt;
   &lt;li class="blog-latest-item"&gt;
+    &lt;img src="https://example.com/blog/content/featured-abc123.png" alt="My First Post" class="blog-featured-image" style="max-width: 200px; height: auto; margin-bottom: 8px;"&gt;
     &lt;a href="/blog/my-first-post.html"&gt;My First Post&lt;/a&gt;
     &lt;div class="excerpt"&gt;This is the excerpt for my first blog post...&lt;/div&gt;
   &lt;/li&gt;
@@ -313,9 +314,10 @@ Block 5: "Normal content"         → Back to normal level</code></pre>
     <ul class="mb-0">
       <li><strong>Ordered by Date</strong>: Posts are sorted by creation date (newest first)</li>
       <li><strong>Published Only</strong>: Only shows published blog posts</li>
+      <li><strong>Featured Images</strong>: Includes featured images when available (PNG preferred, WebP fallback)</li>
       <li><strong>Complete Links</strong>: Each post links to <code>/blog/slug.html</code></li>
       <li><strong>Excerpts Included</strong>: Shows post excerpts when available</li>
-      <li><strong>CSS Classes</strong>: Includes <code>blog-latest</code> and <code>blog-latest-item</code> classes for styling</li>
+      <li><strong>CSS Classes</strong>: Includes <code>blog-latest</code>, <code>blog-latest-item</code>, and <code>blog-featured-image</code> classes for styling</li>
     </ul>
   </div>
 

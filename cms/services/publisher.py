@@ -117,9 +117,14 @@ def generate_page_html(page_id, preview=False):
 
         # {{blog:latest}} -> UL of all published blog posts ordered by date (newest first)
         if '{{blog:latest}}' in content_out:
+            # Get base_url from settings
+            cursor.execute('SELECT value FROM settings WHERE key = ?', ('base_url',))
+            base_url_row = cursor.fetchone()
+            base_url = base_url_row['value'] if base_url_row else 'http://localhost:5000'
+            
             cursor.execute(
                 """
-                SELECT title, slug, excerpt
+                SELECT title, slug, excerpt, featured_png, featured_webp
                 FROM pages
                 WHERE type = 'blog' AND published = 1
                 ORDER BY created_at DESC
@@ -132,7 +137,23 @@ def generate_page_html(page_id, preview=False):
                     href = f'/blog/{r["slug"]}.html'
                     title = r['title'] or r['slug']
                     excerpt = (r['excerpt'] or '').strip() if 'excerpt' in r.keys() else ''
-                    if excerpt:
+                    
+                    # Check for featured image
+                    featured_img = ''
+                    if 'featured_png' in r.keys() and r['featured_png']:
+                        # Use PNG version, fallback to WebP
+                        img_path = r['featured_png']
+                        featured_img = f'<img src="{base_url}{img_path}" alt="{title}" class="blog-featured-image" style="max-width: 200px; height: auto; margin-bottom: 8px;">'
+                    elif 'featured_webp' in r.keys() and r['featured_webp']:
+                        img_path = r['featured_webp']
+                        featured_img = f'<img src="{base_url}{img_path}" alt="{title}" class="blog-featured-image" style="max-width: 200px; height: auto; margin-bottom: 8px;">'
+                    
+                    # Build the list item with featured image if it exists
+                    if featured_img and excerpt:
+                        items.append(f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{href}">{title}</a><div class="excerpt">{excerpt}</div></li>')
+                    elif featured_img:
+                        items.append(f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{href}">{title}</a></li>')
+                    elif excerpt:
                         items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a><div class="excerpt">{excerpt}</div></li>')
                     else:
                         items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a></li>')

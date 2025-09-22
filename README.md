@@ -241,7 +241,7 @@ Built-in shortcodes for dynamic content generation:
 
 #### Blog Tokens
 - `{{blog:categories}}` - Unordered list of all blog categories with links
-- `{{blog:latest}}` - Unordered list of all published blog posts (newest first) with title, excerpt, and links to `/blog/slug.html`
+- `{{blog:latest}}` - Unordered list of all published blog posts (newest first) with featured images (if available), title, excerpt, and links to `/blog/slug.html`
 - `{{blog:category:123}}` - Unordered list of blog posts in category ID 123
 - `{{blog:category:[123]}}` - Same as above with bracket syntax
 
@@ -389,7 +389,7 @@ The CMS includes built-in blog support:
 
 #### Blog Shortcodes
 Use these shortcodes in templates for dynamic blog content:
-- `{{blog:latest}}` - List of all published blog posts (newest first)
+- `{{blog:latest}}` - List of all published blog posts (newest first) with featured images
 - `{{blog:categories}}` - List of all blog categories with links
 - `{{blog:category:123}}` - List of posts in specific category
 
@@ -454,7 +454,7 @@ These shortcodes are automatically processed during page publishing:
 
 #### Blog Content
 - `{{blog:categories}}` - Unordered list of all blog categories with links
-- `{{blog:latest}}` - Unordered list of all published blog posts (newest first)
+- `{{blog:latest}}` - Unordered list of all published blog posts (newest first) with featured images
 - `{{blog:category:123}}` - Unordered list of blog posts in category ID 123
 
 #### Site Configuration
