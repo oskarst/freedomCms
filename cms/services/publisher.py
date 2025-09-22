@@ -116,9 +116,9 @@ def generate_page_html(page_id, preview=False):
                 html = '<ul></ul>'
             content_out = content_out.replace('{{blog:categories}}', html)
 
-        # {{blog:latest}} -> UL of all published blog posts ordered by date (newest first)
+        # {{blog:latest}} -> UL of all published blog posts ordered by date (newest first) with pagination
         if '{{blog:latest}}' in content_out:
-            # Get base_url and blog_latest_template from settings
+            # Get base_url, blog_latest_template, and pagination setting from settings
             cursor.execute('SELECT value FROM settings WHERE key = ?', ('base_url',))
             base_url_row = cursor.fetchone()
             base_url = base_url_row['value'] if base_url_row else 'http://localhost:5000'
@@ -126,6 +126,10 @@ def generate_page_html(page_id, preview=False):
             cursor.execute('SELECT value FROM settings WHERE key = ?', ('blog_latest_template',))
             template_row = cursor.fetchone()
             blog_template = template_row['value'] if template_row else '<ul class="blog-latest">\n{items}\n</ul>'
+            
+            cursor.execute('SELECT value FROM settings WHERE key = ?', ('blog_articles_per_page',))
+            per_page_row = cursor.fetchone()
+            articles_per_page = int(per_page_row['value']) if per_page_row else 20
             
             cursor.execute(
                 """
@@ -175,41 +179,109 @@ def generate_page_html(page_id, preview=False):
                         'base_url': base_url
                     })
                     
-                    # Create default item template if none specified in blog_template
-                    if '{items}' in blog_template:
-                        # Use the outer template structure and create default item content
-                        if featured_img and post_attrs['excerpt']:
-                            item_html = f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{post_attrs["href"]}">{post_attrs["title"]}</a>{metadata_html}<div class="excerpt">{post_attrs["excerpt"]}</div></li>'
-                        elif featured_img:
-                            item_html = f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{post_attrs["href"]}">{post_attrs["title"]}</a>{metadata_html}</li>'
-                        elif post_attrs['excerpt']:
-                            item_html = f'<li class="blog-latest-item"><a href="{post_attrs["href"]}">{post_attrs["title"]}</a>{metadata_html}<div class="excerpt">{post_attrs["excerpt"]}</div></li>'
-                        else:
-                            item_html = f'<li class="blog-latest-item"><a href="{post_attrs["href"]}">{post_attrs["title"]}</a>{metadata_html}</li>'
-                        items.append(item_html)
-                    else:
-                        # Use the template as-is with parameter substitution
-                        item_html = blog_template
-                        for key, value in post_attrs.items():
-                            # Replace both single and double brace syntax for compatibility
-                            # Order matters: process double braces first to avoid conflicts
-                            item_html = item_html.replace(f'{{{{ {key} }}}}', str(value))
-                            item_html = item_html.replace(f'{{{{{key}}}}}', str(value))
-                            item_html = item_html.replace(f'{{{key}}}', str(value))
-                        items.append(item_html)
+                    # Use the template as-is with parameter substitution
+                    item_html = blog_template
+                    for key, value in post_attrs.items():
+                        # Replace both single and double brace syntax for compatibility
+                        # Order matters: process double braces first to avoid conflicts
+                        item_html = item_html.replace(f'{{{{ {key} }}}}', str(value))
+                        item_html = item_html.replace(f'{{{{{key}}}}}', str(value))
+                        item_html = item_html.replace(f'{{{key}}}', str(value))
+                    items.append(item_html)
                 
-                # Generate final HTML
+                # Calculate pagination
+                total_posts = len(items)
+                total_pages = (total_posts + articles_per_page - 1) // articles_per_page  # Ceiling division
+                
+                # Generate final HTML with pagination
                 if '{items}' in blog_template:
-                    html = blog_template.replace('{items}', ''.join(items))
+                    # Legacy template with {items} placeholder
+                    posts_html = blog_template.replace('{items}', ''.join(items))
                 else:
                     # Template contains only li elements, wrap them with ul
-                    html = f'<ul class="blog-latest">{"".join(items)}</ul>'
+                    posts_html = f'<ul class="blog-latest" id="blog-latest-list">{"".join(items)}</ul>'
+                
+                # Add pagination HTML and JavaScript
+                pagination_html = f'''
+                <div class="blog-pagination-container">
+                    {posts_html}
+                    <nav aria-label="Blog pagination" class="mt-4">
+                        <ul class="pagination justify-content-center" id="blog-pagination">
+                            <li class="page-item disabled" id="prev-btn">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                            </li>
+                            <li class="page-item disabled" id="next-btn">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                        <div class="text-center mt-2">
+                            <small class="text-muted" id="pagination-info">Page 1 of {total_pages} ({total_posts} articles)</small>
+                        </div>
+                    </nav>
+                </div>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {{
+                    const itemsPerPage = {articles_per_page};
+                    const totalItems = {total_posts};
+                    const totalPages = {total_pages};
+                    let currentPage = 1;
+                    
+                    const blogList = document.getElementById('blog-latest-list');
+                    const prevBtn = document.getElementById('prev-btn');
+                    const nextBtn = document.getElementById('next-btn');
+                    const paginationInfo = document.getElementById('pagination-info');
+                    
+                    if (!blogList || totalPages <= 1) {{
+                        // Hide pagination if not needed
+                        document.querySelector('.blog-pagination-container nav').style.display = 'none';
+                        return;
+                    }}
+                    
+                    const allItems = Array.from(blogList.children);
+                    
+                    function showPage(page) {{
+                        const startIndex = (page - 1) * itemsPerPage;
+                        const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+                        
+                        // Hide all items
+                        allItems.forEach(item => item.style.display = 'none');
+                        
+                        // Show items for current page
+                        for (let i = startIndex; i < endIndex; i++) {{
+                            if (allItems[i]) allItems[i].style.display = 'block';
+                        }}
+                        
+                        // Update pagination buttons
+                        prevBtn.classList.toggle('disabled', page === 1);
+                        nextBtn.classList.toggle('disabled', page === totalPages);
+                        
+                        // Update pagination info
+                        paginationInfo.textContent = `Page ${{page}} of ${{totalPages}} (${{totalItems}} articles)`;
+                        
+                        currentPage = page;
+                    }}
+                    
+                    // Event listeners
+                    prevBtn.addEventListener('click', function(e) {{
+                        e.preventDefault();
+                        if (currentPage > 1) showPage(currentPage - 1);
+                    }});
+                    
+                    nextBtn.addEventListener('click', function(e) {{
+                        e.preventDefault();
+                        if (currentPage < totalPages) showPage(currentPage + 1);
+                    }});
+                    
+                    // Initialize
+                    showPage(1);
+                }});
+                </script>
+                '''
+                
+                html = pagination_html
             else:
-                # Empty state - use template structure if it has {items}, otherwise empty ul
-                if '{items}' in blog_template:
-                    html = blog_template.replace('{items}', '')
-                else:
-                    html = '<ul class="blog-latest"></ul>'
+                # Empty state
+                html = '<ul class="blog-latest"></ul>'
             content_out = content_out.replace('{{blog:latest}}', html)
 
         # {{blog:category:[id]}} -> UL of posts within category id

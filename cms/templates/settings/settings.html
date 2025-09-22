@@ -52,6 +52,9 @@
                                 <strong>Template structure:</strong> Template should contain only <code>&lt;li&gt;</code> elements. The <code>&lt;ul class="blog-latest"&gt;</code> wrapper is added automatically around multiple items.<br>
                                 <strong>Note:</strong> Both single <code>{param}</code> and double <code>{{ '{{' }}param{{ '}}' }}</code> brace syntax are supported.
                             </div>
+                            {% elif setting.key == 'blog_articles_per_page' %}
+                            <input type="number" class="form-control" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" value="{{ setting.value }}" min="1" max="100">
+                            <div class="form-text">Number of blog articles to display per page in {{ '{{' }}blog:latest{{ '}}' }} shortcode. Pagination will be automatically added when needed.</div>
                             {% else %}
                             <input type="text" class="form-control" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" value="{{ setting.value }}">
                             {% endif %}
