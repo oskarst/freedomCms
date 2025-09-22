@@ -719,7 +719,7 @@ def edit_page(page_id):
                         
                         # Create unique filename
                         unique = f"featured-{uuid.uuid4().hex[:10]}"
-                        out_dir = os.path.join(PUB_DIR, 'blog')
+                        out_dir = os.path.join(PUB_DIR, 'blog', 'content')
                         os.makedirs(out_dir, exist_ok=True)
                         
                         # Save full size images (max 1600x1600)
@@ -738,8 +738,8 @@ def edit_page(page_id):
                         thumb_img.save(thumb_png_path, format='PNG', optimize=True)
                         thumb_img.save(thumb_webp_path, format='WEBP', quality=85, method=6)
                         
-                        featured_png = f"/blog/{unique}.png"
-                        featured_webp = f"/blog/{unique}.webp"
+                        featured_png = f"/blog/content/{unique}.png"
+                        featured_webp = f"/blog/content/{unique}.webp"
                         flash(f'Featured image uploaded successfully: {unique}', 'success')
             except Exception as e:
                 flash(f'Failed to upload featured image: {str(e)}', 'error')
@@ -899,12 +899,8 @@ def edit_page(page_id):
 
         # Redirect based on action and page type
         if action == 'save':
-            # After saving, redirect to appropriate pages list based on page type
-            page_type = page['type'] if 'type' in page.keys() else 'page'
-            if page_type == 'blog':
-                return redirect(url_for('pages.pages', type='blog'))
-            else:
-                return redirect(url_for('pages.pages', type='page'))
+            # After saving, stay on the same edit page
+            return redirect(url_for('pages.edit_page', page_id=page_id))
         else:
             # For other actions (add_template, remove_template, toggle_mode), stay on edit page
             return redirect(url_for('pages.edit_page', page_id=page_id))
