@@ -242,6 +242,7 @@ def export_pages():
                 'slug': row['slug'],
                 'published': row['published'],
                 'mode': row['mode'] if 'mode' in row.keys() else 'simple',
+                'type': row['type'] if 'type' in row.keys() else 'page',
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
                 'templates': [],
@@ -331,6 +332,7 @@ def export_selected_pages():
                 'slug': row['slug'],
                 'published': row['published'],
                 'mode': row['mode'] if 'mode' in row.keys() else 'simple',
+                'type': row['type'] if 'type' in row.keys() else 'page',
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
                 'templates': [],
@@ -411,13 +413,14 @@ def import_pages(import_data, overwrite_existing, cursor):
 
             # Insert new page
             cursor.execute('''
-                INSERT INTO pages (title, slug, published, mode, template_group_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO pages (title, slug, published, mode, type, template_group_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 page_data['title'],
                 page_data['slug'],
                 page_data.get('published', 0),
                 page_data.get('mode', 'simple'),
+                page_data.get('type', 'page'),
                 template_group_id,
                 page_data.get('created_at', '2024-01-01T00:00:00'),
                 page_data.get('updated_at', '2024-01-01T00:00:00')
