@@ -871,6 +871,14 @@ def edit_page(page_id):
             generate_page_html(page_id)
             cursor.execute('UPDATE pages SET published = 1 WHERE id = ?', (page_id,))
             db.commit()
+            
+            # Generate sitemap after successful publication
+            try:
+                from ..services.publisher import generate_sitemap
+                generate_sitemap()
+            except Exception:
+                pass  # Don't fail the publish if sitemap generation fails
+            
             flash('Page published successfully', 'success')
 
         elif action == 'add_template':
@@ -1201,6 +1209,14 @@ def publish_page(page_id):
                         continue
         except Exception:
             pass
+        
+        # Generate sitemap after successful publication
+        try:
+            from ..services.publisher import generate_sitemap
+            generate_sitemap()
+        except Exception:
+            pass  # Don't fail the publish if sitemap generation fails
+        
         flash('Page published successfully', 'success')
     else:  # Error case
         flash('Failed to publish page', 'error')
@@ -1241,6 +1257,13 @@ def republish_all_pages():
             republished_count += 1
         except Exception as e:
             errors.append(f"Page '{page['title']}': {str(e)}")
+    
+    # Generate sitemap after republishing
+    try:
+        from ..services.publisher import generate_sitemap
+        generate_sitemap()
+    except Exception:
+        pass  # Don't fail the republish if sitemap generation fails
     
     if errors:
         flash(f'Republished {republished_count} pages. Errors: {"; ".join(errors)}', 'warning')

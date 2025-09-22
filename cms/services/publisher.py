@@ -6,6 +6,7 @@ Page publishing service for Devall CMS
 import os
 from jinja2 import Template
 from markupsafe import Markup
+from datetime import datetime
 from ..db import get_db, PUB_DIR
 
 def generate_page_html(page_id, preview=False):
@@ -257,4 +258,88 @@ def generate_page_html(page_id, preview=False):
             f.write(html_content)
 
         return filename
+
+def generate_sitemap():
+    """Generate sitemap.xml with all published pages and blog posts"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Get base_url from settings
+    cursor.execute('SELECT value FROM settings WHERE key = ?', ('base_url',))
+    base_url_row = cursor.fetchone()
+    base_url = base_url_row['value'] if base_url_row else 'http://localhost:5000'
+    
+    # Remove trailing slash from base_url if present
+    base_url = base_url.rstrip('/')
+    
+    # Get all published pages and blog posts
+    cursor.execute('''
+        SELECT slug, type, updated_at, published_date
+        FROM pages 
+        WHERE published = 1 
+        ORDER BY 
+            CASE WHEN type = 'page' THEN 1 ELSE 2 END,
+            COALESCE(published_date, updated_at, created_at) DESC
+    ''')
+    pages = cursor.fetchall()
+    
+    # Generate sitemap XML
+    sitemap_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+'''
+    
+    for page in pages:
+        slug = page['slug']
+        page_type = page['type']
+        updated_at = page['updated_at']
+        published_date = page['published_date']
+        
+        # Determine URL path
+        if page_type == 'blog':
+            url_path = f'/blog/{slug}.html'
+        else:
+            url_path = f'/{slug}.html'
+        
+        # Use published_date if available, otherwise use updated_at
+        lastmod = published_date if published_date else updated_at
+        
+        # Format lastmod date (ensure it's in YYYY-MM-DD format)
+        if lastmod:
+            try:
+                # Parse the date and reformat it
+                if 'T' in lastmod:
+                    lastmod_date = datetime.fromisoformat(lastmod.replace('Z', '+00:00')).date()
+                else:
+                    lastmod_date = datetime.strptime(lastmod, '%Y-%m-%d').date()
+                lastmod_str = lastmod_date.strftime('%Y-%m-%d')
+            except:
+                # Fallback to current date if parsing fails
+                lastmod_str = datetime.now().strftime('%Y-%m-%d')
+        else:
+            lastmod_str = datetime.now().strftime('%Y-%m-%d')
+        
+        # Set priority based on page type
+        if page_type == 'blog':
+            priority = '0.8'
+            changefreq = 'weekly'
+        else:
+            priority = '1.0'
+            changefreq = 'monthly'
+        
+        sitemap_content += f'''  <url>
+    <loc>{base_url}{url_path}</loc>
+    <lastmod>{lastmod_str}</lastmod>
+    <changefreq>{changefreq}</changefreq>
+    <priority>{priority}</priority>
+  </url>
+'''
+    
+    sitemap_content += '</urlset>'
+    
+    # Write sitemap to pub directory
+    sitemap_path = os.path.join(PUB_DIR, 'sitemap.xml')
+    with open(sitemap_path, 'w', encoding='utf-8') as f:
+        f.write(sitemap_content)
+    
+    return sitemap_path
 
