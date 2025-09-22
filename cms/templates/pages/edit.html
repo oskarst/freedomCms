@@ -125,7 +125,8 @@
                                             <img src="{{ base_url }}{{ (page.featured_png or page.featured_webp).replace('.png','-thumb.png').replace('.webp','-thumb.webp') }}" alt="Featured" style="max-width: 200px; height: auto; border: 1px solid #ddd; border-radius: 4px;"/>
                                         </div>
                                         
-                                        <!-- Copy URL Buttons -->
+                                        <!-- Copy URL Buttons (Advanced Mode Only) -->
+                                        {% if page.mode == 'advanced' %}
                                         <div class="mb-2">
                                             <label class="form-label fw-bold small">Image URLs:</label>
                                             <div class="row g-2">
@@ -167,6 +168,7 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        {% endif %}
                                         
                                         <!-- Remove Button -->
                                         <div>
