@@ -530,11 +530,14 @@ def add_page():
         # Insert new page with default values for blog fields
         page_type = default_type if default_type in ('page', 'blog') else 'page'
         if page_type == 'blog':
-            # Set default author to current user and published_date to current date for blogs
+            # Set default author to current user's name and published_date to current date for blogs
             from flask import session
-            current_user = session.get('username', 'Unknown User')
+            username = session.get('username', 'admin')
+            cursor.execute('SELECT name FROM users WHERE username = ?', (username,))
+            user_row = cursor.fetchone()
+            user_name = user_row['name'] if user_row and user_row['name'] else username
             cursor.execute('INSERT INTO pages (title, slug, mode, template_group_id, type, author, published_date) VALUES (?, ?, ?, ?, ?, ?, date("now"))', 
-                         (title, slug_input, 'simple', template_group_id, page_type, current_user))
+                         (title, slug_input, 'simple', template_group_id, page_type, user_name))
         else:
             cursor.execute('INSERT INTO pages (title, slug, mode, template_group_id, type) VALUES (?, ?, ?, ?, ?)', 
                          (title, slug_input, 'simple', template_group_id, page_type))

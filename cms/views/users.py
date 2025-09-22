@@ -30,6 +30,7 @@ def add_user():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
         email = request.form.get('email', '').strip()
+        name = request.form.get('name', '').strip()
         role = request.form.get('role', 'admin')
 
         if not username or not password:
@@ -46,8 +47,8 @@ def add_user():
             return redirect(url_for('users.add_user'))
 
         # Create user
-        cursor.execute('INSERT INTO users (username, password_hash, email, role) VALUES (?, ?, ?, ?)',
-                     (username, hash_password(password), email, role))
+        cursor.execute('INSERT INTO users (username, password_hash, email, name, role) VALUES (?, ?, ?, ?, ?)',
+                     (username, hash_password(password), email, name, role))
         db.commit()
 
         flash('User created successfully', 'success')
@@ -75,6 +76,7 @@ def edit_user(user_id):
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
         email = request.form.get('email', '').strip()
+        name = request.form.get('name', '').strip()
         role = request.form.get('role', user['role'])
         active = request.form.get('active') == 'on'
 
@@ -90,11 +92,11 @@ def edit_user(user_id):
 
         # Update user
         if password:
-            cursor.execute('UPDATE users SET username = ?, password_hash = ?, email = ?, role = ?, active = ? WHERE id = ?',
-                         (username, hash_password(password), email, role, active, user_id))
+            cursor.execute('UPDATE users SET username = ?, password_hash = ?, email = ?, name = ?, role = ?, active = ? WHERE id = ?',
+                         (username, hash_password(password), email, name, role, active, user_id))
         else:
-            cursor.execute('UPDATE users SET username = ?, email = ?, role = ?, active = ? WHERE id = ?',
-                         (username, email, role, active, user_id))
+            cursor.execute('UPDATE users SET username = ?, email = ?, name = ?, role = ?, active = ? WHERE id = ?',
+                         (username, email, name, role, active, user_id))
 
         db.commit()
         flash('User updated successfully', 'success')

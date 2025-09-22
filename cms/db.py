@@ -58,11 +58,18 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             email TEXT,
+            name TEXT,
             role TEXT DEFAULT 'admin',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             active BOOLEAN DEFAULT 1
         )
     ''')
+    
+    # Add name column to existing users table if it doesn't exist
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN name TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
 
     # Settings table
     cursor.execute('''
@@ -293,8 +300,8 @@ def init_db():
     # Insert default admin user if not exists
     cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))
     if cursor.fetchone()[0] == 0:
-        cursor.execute('INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)',
-                     ('admin', hash_password('admin123'), 'admin@devall.com'))
+        cursor.execute('INSERT INTO users (username, password_hash, email, name) VALUES (?, ?, ?, ?)',
+                     ('admin', hash_password('admin123'), 'admin@devall.com', 'Administrator'))
 
     # Insert default settings
     default_settings = [
