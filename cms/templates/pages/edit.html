@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% set title = "Edit Page" %}
+{% set title = "Edit " + ((page.type or "page")|title) %}
 
 {% block content %}
 <div class="container-fluid">
@@ -35,7 +35,7 @@
         <div class="row">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h1 class="mb-0">Edit Page</h1>
+                    <h1 class="mb-0">Edit {{ (page.type or "page")|title }}</h1>
                     <div class="d-flex gap-2">
                         <a href="{{ url_for('pages.pages', type='blog' if page.type == 'blog' else 'page') }}" class="btn btn-outline-secondary rounded-pill">
                             <i class="bi bi-arrow-left"></i> Back to {{ 'Blog Articles' if page.type == 'blog' else 'Pages' }}
@@ -69,13 +69,13 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0">Page Information</h5>
+                        <h5 class="mb-0">Information</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="page_title" class="form-label fw-bold">Page Title</label>
+                                    <label for="page_title" class="form-label fw-bold">Title</label>
                                     <input type="text" class="form-control" id="page_title" name="page_title" 
                                            value="{{ page.title }}" required oninput="generateSlug()">
                                     <div class="form-text">The display title for this page</div>
@@ -83,7 +83,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="page_slug" class="form-label fw-bold">Page Slug</label>
+                                    <label for="page_slug" class="form-label fw-bold">Slug</label>
                                     <input type="text" class="form-control" id="page_slug" name="page_slug" 
                                            value="{{ page.slug }}" required>
                                     <div class="form-text">URL-friendly version of the title (e.g., "my-page")</div>
@@ -161,7 +161,7 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5>Page Template Blocks</h5>
+                        <h5>Template Blocks</h5>
                         <div class="d-flex gap-2">
                             <select id="templateSelect" class="form-select form-select-sm" style="width: auto;">
                                 <option value="">Select template block to add...</option>
