@@ -904,7 +904,7 @@ def delete_page(page_id):
     cursor = db.cursor()
 
     # Check if page exists
-    cursor.execute('SELECT title FROM pages WHERE id = ?', (page_id,))
+    cursor.execute('SELECT title, type FROM pages WHERE id = ?', (page_id,))
     page = cursor.fetchone()
 
     if not page:
@@ -916,7 +916,13 @@ def delete_page(page_id):
     db.commit()
 
     flash(f'Page "{page["title"]}" deleted successfully', 'success')
-    return redirect(url_for('pages.pages'))
+    
+    # Redirect based on page type
+    page_type = page['type'] if 'type' in page.keys() else 'page'
+    if page_type == 'blog':
+        return redirect(url_for('pages.pages', type='blog'))
+    else:
+        return redirect(url_for('pages.pages', type='page'))
 
 @bp.route('/pages/delete-all', methods=['POST'])
 @login_required
