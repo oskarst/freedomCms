@@ -38,6 +38,16 @@ def extract_parameters_from_content(content):
         return []
     
     # Find all {{ parameter_name:type }} or {{ parameter_name }} patterns
+    # First, skip system shortcodes that have complex patterns
+    system_patterns = [
+        r'\{\{\s*(?:page|blog|config):[^}]+\}\}',  # {{page:title}}, {{blog:latest}}, {{config:base_url}}
+        r'\{\{\s*if\s+[^}]+\}\}',  # {{if page:featured}}
+    ]
+    
+    for pattern in system_patterns:
+        content = re.sub(pattern, '', content)
+    
+    # Now find remaining parameters
     pattern = r'\{\{\s*([^}:]+)(?::([^}]+))?\s*\}\}'
     matches = re.findall(pattern, content)
     
@@ -48,9 +58,6 @@ def extract_parameters_from_content(content):
         param_name = match[0].strip()
         param_type = match[1].strip() if match[1] else 'text'  # Default to 'text' if no type specified
         
-        # Skip system shortcodes - these are not user-editable parameters
-        if param_name.startswith(('page:', 'blog:', 'config:', 'if ')):
-            continue
         
         # Create parameter info dict
         param_info = {
