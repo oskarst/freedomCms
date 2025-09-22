@@ -48,6 +48,10 @@ def extract_parameters_from_content(content):
         param_name = match[0].strip()
         param_type = match[1].strip() if match[1] else 'text'  # Default to 'text' if no type specified
         
+        # Skip system shortcodes - these are not user-editable parameters
+        if param_name.startswith(('page:', 'blog:', 'config:', 'if ')):
+            continue
+        
         # Create parameter info dict
         param_info = {
             'name': param_name,
