@@ -154,6 +154,16 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add author and published_date columns to pages if missing (for blog type pages)
+    try:
+        cursor.execute('ALTER TABLE pages ADD COLUMN author TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    try:
+        cursor.execute('ALTER TABLE pages ADD COLUMN published_date TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Add default template columns to template_groups if missing
     try:
         cursor.execute('ALTER TABLE template_groups ADD COLUMN is_default_page BOOLEAN DEFAULT 0')

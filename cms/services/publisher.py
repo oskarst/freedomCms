@@ -124,10 +124,10 @@ def generate_page_html(page_id, preview=False):
             
             cursor.execute(
                 """
-                SELECT title, slug, excerpt, featured_png, featured_webp
+                SELECT title, slug, excerpt, featured_png, featured_webp, author, published_date
                 FROM pages
                 WHERE type = 'blog' AND published = 1
-                ORDER BY created_at DESC
+                ORDER BY COALESCE(published_date, created_at) DESC
                 """
             )
             posts = cursor.fetchall()
@@ -148,15 +148,27 @@ def generate_page_html(page_id, preview=False):
                         img_path = r['featured_webp']
                         featured_img = f'<img src="{base_url}{img_path}" alt="{title}" class="blog-featured-image" style="max-width: 200px; height: auto; margin-bottom: 8px;">'
                     
-                    # Build the list item with featured image if it exists
+                    # Get author and published date
+                    author = r['author'] if 'author' in r.keys() and r['author'] else None
+                    published_date = r['published_date'] if 'published_date' in r.keys() and r['published_date'] else None
+                    
+                    # Build metadata (author and date)
+                    metadata = []
+                    if author:
+                        metadata.append(f'<span class="blog-author">By {author}</span>')
+                    if published_date:
+                        metadata.append(f'<span class="blog-date">{published_date}</span>')
+                    metadata_html = f'<div class="blog-meta">{" | ".join(metadata)}</div>' if metadata else ''
+                    
+                    # Build the list item with featured image, metadata, and excerpt if they exist
                     if featured_img and excerpt:
-                        items.append(f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{href}">{title}</a><div class="excerpt">{excerpt}</div></li>')
+                        items.append(f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{href}">{title}</a>{metadata_html}<div class="excerpt">{excerpt}</div></li>')
                     elif featured_img:
-                        items.append(f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{href}">{title}</a></li>')
+                        items.append(f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{href}">{title}</a>{metadata_html}</li>')
                     elif excerpt:
-                        items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a><div class="excerpt">{excerpt}</div></li>')
+                        items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a>{metadata_html}<div class="excerpt">{excerpt}</div></li>')
                     else:
-                        items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a></li>')
+                        items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a>{metadata_html}</li>')
                 html = '<ul class="blog-latest">' + ''.join(items) + '</ul>'
             else:
                 html = '<ul class="blog-latest"></ul>'

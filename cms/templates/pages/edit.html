@@ -115,6 +115,22 @@
                             </div>
                         </div>
                         <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="page_author" class="form-label fw-bold">Author</label>
+                                    <input type="text" class="form-control" id="page_author" name="page_author" value="{{ page.author or '' }}" placeholder="Author name">
+                                    <div class="form-text">Author of this blog post (defaults to current user)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="page_published_date" class="form-label fw-bold">Published Date</label>
+                                    <input type="date" class="form-control" id="page_published_date" name="page_published_date" value="{{ (page.published_date or page.created_at)[:10] }}">
+                                    <div class="form-text">Publication date for this blog post (defaults to creation date)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-12">
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Featured Image</label>

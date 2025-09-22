@@ -227,7 +227,7 @@ def export_pages():
     # Get all pages with their templates
     base_query = '''
         SELECT
-            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at, p.template_group_id, p.type,
+            p.id, p.title, p.slug, p.published, p.mode, p.created_at, p.updated_at, p.template_group_id, p.type, p.author, p.published_date,
             pt.id as pt_id, pt.template_id, pt.title as pt_title, pt.custom_content, pt.use_default, pt.sort_order,
             t.title as template_title, t.slug as template_slug, t.category, t.default_parameters,
             tg.title as template_group_title
@@ -256,6 +256,8 @@ def export_pages():
                 'published': row['published'],
                 'mode': row['mode'] if 'mode' in row.keys() else 'simple',
                 'type': row['type'] if 'type' in row.keys() else 'page',
+                'author': row['author'] if 'author' in row.keys() else None,
+                'published_date': row['published_date'] if 'published_date' in row.keys() else None,
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
                 'templates': [],
@@ -346,6 +348,8 @@ def export_selected_pages():
                 'published': row['published'],
                 'mode': row['mode'] if 'mode' in row.keys() else 'simple',
                 'type': row['type'] if 'type' in row.keys() else 'page',
+                'author': row['author'] if 'author' in row.keys() else None,
+                'published_date': row['published_date'] if 'published_date' in row.keys() else None,
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
                 'templates': [],
@@ -426,8 +430,8 @@ def import_pages(import_data, overwrite_existing, cursor):
 
             # Insert new page
             cursor.execute('''
-                INSERT INTO pages (title, slug, published, mode, type, template_group_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO pages (title, slug, published, mode, type, template_group_id, author, published_date, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 page_data['title'],
                 page_data['slug'],
@@ -435,6 +439,8 @@ def import_pages(import_data, overwrite_existing, cursor):
                 page_data.get('mode', 'simple'),
                 page_data.get('type', 'page'),
                 template_group_id,
+                page_data.get('author'),
+                page_data.get('published_date'),
                 page_data.get('created_at', '2024-01-01T00:00:00'),
                 page_data.get('updated_at', '2024-01-01T00:00:00')
             ))
@@ -521,8 +527,17 @@ def add_page():
             flash(f'{entity_label} with this slug already exists', 'error')
             return redirect(url_for('pages.add_page', type=default_type))
 
-        # Insert new page
-        cursor.execute('INSERT INTO pages (title, slug, mode, template_group_id, type) VALUES (?, ?, ?, ?, ?)', (title, slug_input, 'simple', template_group_id, default_type if default_type in ('page', 'blog') else 'page'))
+        # Insert new page with default values for blog fields
+        page_type = default_type if default_type in ('page', 'blog') else 'page'
+        if page_type == 'blog':
+            # Set default author to current user and published_date to current date for blogs
+            from flask import session
+            current_user = session.get('username', 'Unknown User')
+            cursor.execute('INSERT INTO pages (title, slug, mode, template_group_id, type, author, published_date) VALUES (?, ?, ?, ?, ?, ?, date("now"))', 
+                         (title, slug_input, 'simple', template_group_id, page_type, current_user))
+        else:
+            cursor.execute('INSERT INTO pages (title, slug, mode, template_group_id, type) VALUES (?, ?, ?, ?, ?)', 
+                         (title, slug_input, 'simple', template_group_id, page_type))
         page_id = cursor.lastrowid
 
         # If a template group was selected, add its blocks to the page
@@ -702,6 +717,9 @@ def edit_page(page_id):
             is_blog_container = 1 if request.form.get('is_blog_container') == 'on' else 0
             # Excerpt (blog only)
             page_excerpt = request.form.get('page_excerpt', '').strip()
+            # Author and published date (blog only)
+            page_author = request.form.get('page_author', '').strip()
+            page_published_date = request.form.get('page_published_date', '').strip()
             
             if not page_title:
                 flash('Page title is required', 'error')
@@ -757,13 +775,13 @@ def edit_page(page_id):
             except Exception as e:
                 flash(f'Failed to upload featured image: {str(e)}', 'error')
 
-            # Update page title, slug, blog container flag, excerpt and featured image paths
+            # Update page title, slug, blog container flag, excerpt, author, published_date and featured image paths
             if featured_png or featured_webp:
-                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, featured_png = ?, featured_webp = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
-                             (page_title, page_slug, is_blog_container, page_excerpt, featured_png, featured_webp, page_id))
+                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, author = ?, published_date = ?, featured_png = ?, featured_webp = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+                             (page_title, page_slug, is_blog_container, page_excerpt, page_author, page_published_date, featured_png, featured_webp, page_id))
             else:
-                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
-                             (page_title, page_slug, is_blog_container, page_excerpt, page_id))
+                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, author = ?, published_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+                             (page_title, page_slug, is_blog_container, page_excerpt, page_author, page_published_date, page_id))
             
             # Update page templates
             cursor.execute('SELECT pt.id, pt.template_id, pt.use_default, pt.sort_order FROM page_templates pt WHERE pt.page_id = ? ORDER BY pt.sort_order', (page_id,))
