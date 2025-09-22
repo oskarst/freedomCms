@@ -306,6 +306,7 @@ def init_db():
         ('media_small_width', '320', 'Media small width (px)'),
         ('media_medium_width', '640', 'Media medium width (px)'),
         ('media_large_width', '1024', 'Media large width (px)'),
+        ('blog_latest_template', '<ul class="blog-latest">\n{items}\n</ul>', 'Template for {{blog:latest}} shortcode. Use {items} for the list items.'),
     ]
     for key, value, desc in default_settings:
         cursor.execute('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)',

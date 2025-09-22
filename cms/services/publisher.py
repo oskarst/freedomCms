@@ -118,10 +118,14 @@ def generate_page_html(page_id, preview=False):
 
         # {{blog:latest}} -> UL of all published blog posts ordered by date (newest first)
         if '{{blog:latest}}' in content_out:
-            # Get base_url from settings
+            # Get base_url and blog_latest_template from settings
             cursor.execute('SELECT value FROM settings WHERE key = ?', ('base_url',))
             base_url_row = cursor.fetchone()
             base_url = base_url_row['value'] if base_url_row else 'http://localhost:5000'
+            
+            cursor.execute('SELECT value FROM settings WHERE key = ?', ('blog_latest_template',))
+            template_row = cursor.fetchone()
+            blog_template = template_row['value'] if template_row else '<ul class="blog-latest">\n{items}\n</ul>'
             
             cursor.execute(
                 """
@@ -135,44 +139,77 @@ def generate_page_html(page_id, preview=False):
             if posts:
                 items = []
                 for r in posts:
-                    href = f'{base_url}/blog/{r["slug"]}.html'
-                    title = r['title'] or r['slug']
-                    excerpt = (r['excerpt'] or '').strip() if 'excerpt' in r.keys() else ''
+                    # Prepare all available attributes for the template
+                    post_attrs = {
+                        'title': r['title'] or r['slug'],
+                        'slug': r['slug'],
+                        'href': f'{base_url}/blog/{r["slug"]}.html',
+                        'excerpt': (r['excerpt'] or '').strip() if 'excerpt' in r.keys() else '',
+                        'author': r['author'] if 'author' in r.keys() and r['author'] else '',
+                        'published_date': r['published_date'] if 'published_date' in r.keys() and r['published_date'] else '',
+                        'featured_png': r['featured_png'] if 'featured_png' in r.keys() and r['featured_png'] else '',
+                        'featured_webp': r['featured_webp'] if 'featured_webp' in r.keys() and r['featured_webp'] else '',
+                    }
                     
-                    # Check for featured image
+                    # Generate featured image HTML if available
                     featured_img = ''
-                    if 'featured_png' in r.keys() and r['featured_png']:
-                        # Use PNG version, fallback to WebP
-                        img_path = r['featured_png']
-                        featured_img = f'<img src="{base_url}{img_path}" alt="{title}" class="blog-featured-image" style="max-width: 200px; height: auto; margin-bottom: 8px;">'
-                    elif 'featured_webp' in r.keys() and r['featured_webp']:
-                        img_path = r['featured_webp']
-                        featured_img = f'<img src="{base_url}{img_path}" alt="{title}" class="blog-featured-image" style="max-width: 200px; height: auto; margin-bottom: 8px;">'
+                    if post_attrs['featured_png']:
+                        img_path = post_attrs['featured_png']
+                        featured_img = f'<img src="{base_url}{img_path}" alt="{post_attrs["title"]}" class="blog-featured-image" style="max-width: 200px; height: auto; margin-bottom: 8px;">'
+                    elif post_attrs['featured_webp']:
+                        img_path = post_attrs['featured_webp']
+                        featured_img = f'<img src="{base_url}{img_path}" alt="{post_attrs["title"]}" class="blog-featured-image" style="max-width: 200px; height: auto; margin-bottom: 8px;">'
                     
-                    # Get author and published date
-                    author = r['author'] if 'author' in r.keys() and r['author'] else None
-                    published_date = r['published_date'] if 'published_date' in r.keys() and r['published_date'] else None
-                    
-                    # Build metadata (author and date)
+                    # Build metadata HTML
                     metadata = []
-                    if author:
-                        metadata.append(f'<span class="blog-author">By {author}</span>')
-                    if published_date:
-                        metadata.append(f'<span class="blog-date">{published_date}</span>')
+                    if post_attrs['author']:
+                        metadata.append(f'<span class="blog-author">By {post_attrs["author"]}</span>')
+                    if post_attrs['published_date']:
+                        metadata.append(f'<span class="blog-date">{post_attrs["published_date"]}</span>')
                     metadata_html = f'<div class="blog-meta">{" | ".join(metadata)}</div>' if metadata else ''
                     
-                    # Build the list item with featured image, metadata, and excerpt if they exist
-                    if featured_img and excerpt:
-                        items.append(f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{href}">{title}</a>{metadata_html}<div class="excerpt">{excerpt}</div></li>')
-                    elif featured_img:
-                        items.append(f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{href}">{title}</a>{metadata_html}</li>')
-                    elif excerpt:
-                        items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a>{metadata_html}<div class="excerpt">{excerpt}</div></li>')
+                    # Add computed fields to attributes
+                    post_attrs.update({
+                        'featured_image': featured_img,
+                        'metadata': metadata_html,
+                        'base_url': base_url
+                    })
+                    
+                    # Create default item template if none specified in blog_template
+                    if '{items}' in blog_template:
+                        # Use the outer template structure and create default item content
+                        if featured_img and post_attrs['excerpt']:
+                            item_html = f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{post_attrs["href"]}">{post_attrs["title"]}</a>{metadata_html}<div class="excerpt">{post_attrs["excerpt"]}</div></li>'
+                        elif featured_img:
+                            item_html = f'<li class="blog-latest-item"><span class="blog-featured-image">{featured_img}</span><a href="{post_attrs["href"]}">{post_attrs["title"]}</a>{metadata_html}</li>'
+                        elif post_attrs['excerpt']:
+                            item_html = f'<li class="blog-latest-item"><a href="{post_attrs["href"]}">{post_attrs["title"]}</a>{metadata_html}<div class="excerpt">{post_attrs["excerpt"]}</div></li>'
+                        else:
+                            item_html = f'<li class="blog-latest-item"><a href="{post_attrs["href"]}">{post_attrs["title"]}</a>{metadata_html}</li>'
+                        items.append(item_html)
                     else:
-                        items.append(f'<li class="blog-latest-item"><a href="{href}">{title}</a>{metadata_html}</li>')
-                html = '<ul class="blog-latest">' + ''.join(items) + '</ul>'
+                        # Use the template as-is with parameter substitution
+                        item_html = blog_template
+                        for key, value in post_attrs.items():
+                            # Replace both single and double brace syntax for compatibility
+                            # Order matters: process double braces first to avoid conflicts
+                            item_html = item_html.replace(f'{{{{ {key} }}}}', str(value))
+                            item_html = item_html.replace(f'{{{{{key}}}}}', str(value))
+                            item_html = item_html.replace(f'{{{key}}}', str(value))
+                        items.append(item_html)
+                
+                # Generate final HTML
+                if '{items}' in blog_template:
+                    html = blog_template.replace('{items}', ''.join(items))
+                else:
+                    # Template contains only li elements, wrap them with ul
+                    html = f'<ul class="blog-latest">{"".join(items)}</ul>'
             else:
-                html = '<ul class="blog-latest"></ul>'
+                # Empty state - use template structure if it has {items}, otherwise empty
+                if '{items}' in blog_template:
+                    html = blog_template.replace('{items}', '')
+                else:
+                    html = '<ul class="blog-latest"></ul>'
             content_out = content_out.replace('{{blog:latest}}', html)
 
         # {{blog:category:[id]}} -> UL of posts within category id

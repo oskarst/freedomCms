@@ -34,6 +34,23 @@
                                     Hide system template blocks by default in page editor
                                 </label>
                             </div>
+                            {% elif setting.key == 'blog_latest_template' %}
+                            <textarea class="form-control" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" rows="8" placeholder="Template for {{ '{{' }}blog:latest{{ '}}' }} shortcode">{{ setting.value }}</textarea>
+                            <div class="form-text">
+                                <strong>Available parameters:</strong><br>
+                                <code>{title}</code> or <code>{{ '{{' }}title{{ '}}' }}</code> - Post title<br>
+                                <code>{slug}</code> or <code>{{ '{{' }}slug{{ '}}' }}</code> - Post slug<br>
+                                <code>{href}</code> or <code>{{ '{{' }}href{{ '}}' }}</code> - Full URL to post<br>
+                                <code>{excerpt}</code> or <code>{{ '{{' }}excerpt{{ '}}' }}</code> - Post excerpt<br>
+                                <code>{author}</code> or <code>{{ '{{' }}author{{ '}}' }}</code> - Post author<br>
+                                <code>{published_date}</code> or <code>{{ '{{' }}published_date{{ '}}' }}</code> - Publication date<br>
+                                <code>{featured_image}</code> or <code>{{ '{{' }}featured_image{{ '}}' }}</code> - Featured image HTML<br>
+                                <code>{metadata}</code> or <code>{{ '{{' }}metadata{{ '}}' }}</code> - Author and date metadata HTML<br>
+                                <code>{base_url}</code> or <code>{{ '{{' }}base_url{{ '}}' }}</code> - Site base URL<br>
+                                <br>
+                                <strong>Template structure:</strong> Use <code>{items}</code> for the list items, or create a complete template without <code>{items}</code>.<br>
+                                <strong>Note:</strong> Both single <code>{param}</code> and double <code>{{ '{{' }}param{{ '}}' }}</code> brace syntax are supported.
+                            </div>
                             {% else %}
                             <input type="text" class="form-control" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" value="{{ setting.value }}">
                             {% endif %}
