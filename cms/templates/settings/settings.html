@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% set title = "Settings" %}
 
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">
@@ -48,7 +49,7 @@
                                 <code>{metadata}</code> or <code>{{ '{{' }}metadata{{ '}}' }}</code> - Author and date metadata HTML<br>
                                 <code>{base_url}</code> or <code>{{ '{{' }}base_url{{ '}}' }}</code> - Site base URL<br>
                                 <br>
-                                <strong>Template structure:</strong> Use <code>{items}</code> for the list items, or create a complete template without <code>{items}</code>.<br>
+                                <strong>Template structure:</strong> Template should contain only <code>&lt;li&gt;</code> elements. The <code>&lt;ul class="blog-latest"&gt;</code> wrapper is added automatically around multiple items.<br>
                                 <strong>Note:</strong> Both single <code>{param}</code> and double <code>{{ '{{' }}param{{ '}}' }}</code> brace syntax are supported.
                             </div>
                             {% else %}
@@ -63,4 +64,5 @@
         </div>
     </div>
 </div>
+
 {% endblock %}

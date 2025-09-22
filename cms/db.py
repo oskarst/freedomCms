@@ -306,7 +306,7 @@ def init_db():
         ('media_small_width', '320', 'Media small width (px)'),
         ('media_medium_width', '640', 'Media medium width (px)'),
         ('media_large_width', '1024', 'Media large width (px)'),
-        ('blog_latest_template', '<ul class="blog-latest">\n{items}\n</ul>', 'Template for {{blog:latest}} shortcode. Use {items} for the list items.'),
+               ('blog_latest_template', '<li class="blog-latest-item">\n<a href="{href}">{title}</a>\n<div class="featured-image">{featured_image}</div>\n<div class="excerpt">{excerpt}</div>\n<a class="btn btn-filled btn-lg mb0" href="{href}">Read More</a>\n</li>', 'Template for {{blog:latest}} shortcode. Should contain only li elements - ul wrapper is added automatically.'),
     ]
     for key, value, desc in default_settings:
         cursor.execute('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)',

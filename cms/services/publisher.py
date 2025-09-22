@@ -205,7 +205,7 @@ def generate_page_html(page_id, preview=False):
                     # Template contains only li elements, wrap them with ul
                     html = f'<ul class="blog-latest">{"".join(items)}</ul>'
             else:
-                # Empty state - use template structure if it has {items}, otherwise empty
+                # Empty state - use template structure if it has {items}, otherwise empty ul
                 if '{items}' in blog_template:
                     html = blog_template.replace('{items}', '')
                 else:
