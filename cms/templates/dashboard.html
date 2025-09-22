@@ -53,6 +53,113 @@
                 </div>
             </div>
             <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="bi bi-question-circle"></i> Quick Links</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('help.help_index') }}" class="btn btn-outline-info btn-lg w-100 mb-3">
+                                        <i class="bi bi-book"></i><br>
+                                        <small>Help & Documentation</small>
+                                    </a>
+                                </div>
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('settings.settings') }}" class="btn btn-outline-secondary btn-lg w-100 mb-3">
+                                        <i class="bi bi-gear"></i><br>
+                                        <small>Settings & Configuration</small>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('pages.pages') }}" class="btn btn-outline-primary w-100 mb-2">
+                                        <i class="bi bi-file-earmark-text"></i> Manage Pages
+                                    </a>
+                                </div>
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('templates_.templates') }}" class="btn btn-outline-success w-100 mb-2">
+                                        <i class="bi bi-braces"></i> Manage Templates
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="bi bi-info-circle"></i> Getting Started</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>Quick Tips:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle text-success"></i> Use shortcodes like <code>{{ "{{blog:latest}}" }}</code> for dynamic content</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Configure pagination in Settings for blog listings</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Create templates for consistent page layouts</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Publish pages to generate static HTML files</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="bi bi-folder"></i> File Management</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('files.list_dir') }}" class="btn btn-outline-primary btn-lg w-100 mb-3">
+                                        <i class="bi bi-folder2-open"></i><br>
+                                        <small>File Manager</small>
+                                    </a>
+                                </div>
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('media.media_list') }}" class="btn btn-outline-success btn-lg w-100 mb-3">
+                                        <i class="bi bi-images"></i><br>
+                                        <small>Media Library</small>
+                                    </a>
+                                </div>
+                            </div>
+                            <p class="text-muted mb-0">
+                                <small>Organize your files and manage media assets for your website.</small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="bi bi-tools"></i> System Management</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('users.users') }}" class="btn btn-outline-warning btn-lg w-100 mb-3">
+                                        <i class="bi bi-people"></i><br>
+                                        <small>User Management</small>
+                                    </a>
+                                </div>
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('pages.republish_all_pages') }}" class="btn btn-outline-info btn-lg w-100 mb-3">
+                                        <i class="bi bi-arrow-clockwise"></i><br>
+                                        <small>Republish All</small>
+                                    </a>
+                                </div>
+                            </div>
+                            <p class="text-muted mb-0">
+                                <small>Manage users and republish all pages to update your website.</small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
