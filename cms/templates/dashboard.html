@@ -139,21 +139,31 @@
                         </div>
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <a href="{{ url_for('users.users') }}" class="btn btn-outline-warning btn-lg w-100 mb-3">
                                         <i class="bi bi-people"></i><br>
                                         <small>User Management</small>
                                     </a>
                                 </div>
-                                <div class="col-md-6">
-                                    <a href="{{ url_for('pages.republish_all_pages') }}" class="btn btn-outline-info btn-lg w-100 mb-3">
-                                        <i class="bi bi-arrow-clockwise"></i><br>
-                                        <small>Republish All</small>
-                                    </a>
+                                <div class="col-md-4">
+                                    <form method="POST" action="{{ url_for('pages.republish_all_pages') }}" style="display: inline-block; width: 100%;">
+                                        <button type="submit" class="btn btn-outline-primary btn-lg w-100 mb-3">
+                                            <i class="bi bi-file-earmark-text"></i><br>
+                                            <small>Republish Pages</small>
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-md-4">
+                                    <form method="POST" action="{{ url_for('pages.republish_all_pages', type='blog') }}" style="display: inline-block; width: 100%;">
+                                        <button type="submit" class="btn btn-outline-success btn-lg w-100 mb-3">
+                                            <i class="bi bi-journal-text"></i><br>
+                                            <small>Republish Blogs</small>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                             <p class="text-muted mb-0">
-                                <small>Manage users and republish all pages to update your website.</small>
+                                <small>Manage users and republish content to update your website.</small>
                             </p>
                         </div>
                     </div>
