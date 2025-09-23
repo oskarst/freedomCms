@@ -497,47 +497,25 @@ def duplicate_template_group(group_id: int):
     ''', (new_title, new_slug, original_group['description']))
     new_group_id = cursor.lastrowid
     
-    # Get all blocks from the original group
+    # Get all blocks from the original group (reuse existing block definitions)
     cursor.execute('''
-        SELECT d.id, d.title, d.slug, d.category, d.content, d.default_parameters, tgb.sort_order
+        SELECT d.id AS block_id, tgb.sort_order
         FROM template_group_blocks tgb
         JOIN page_template_defs d ON tgb.template_id = d.id
         WHERE tgb.group_id = ?
         ORDER BY tgb.sort_order
     ''', (group_id,))
     original_blocks = cursor.fetchall()
-    
-    # Duplicate each block and add to new group
+
+    # Attach the same blocks (by id) to the new group preserving order
     for block in original_blocks:
-        # Create new block title and slug
-        new_block_title = f"{block['title']} (Copy)"
-        new_block_slug = slugify(new_block_title)
-        
-        # Ensure unique block slug
-        counter = 1
-        base_block_slug = new_block_slug
-        while True:
-            cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (new_block_slug,))
-            if not cursor.fetchone():
-                break
-            new_block_slug = f"{base_block_slug}-{counter}"
-            counter += 1
-        
-        # Insert new block
-        cursor.execute('''
-            INSERT INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters)
-            VALUES (?, ?, ?, ?, 0, ?, ?)
-        ''', (new_block_title, new_block_slug, block['category'], block['content'], block['sort_order'], block['default_parameters']))
-        new_block_id = cursor.lastrowid
-        
-        # Add block to new group
         cursor.execute('''
             INSERT INTO template_group_blocks (group_id, template_id, sort_order)
             VALUES (?, ?, ?)
-        ''', (new_group_id, new_block_id, block['sort_order']))
+        ''', (new_group_id, block['block_id'], block['sort_order']))
     
     db.commit()
-    flash(f'Template group "{original_group["title"]}" duplicated as "{new_title}"', 'success')
+    flash(f'Template group "{original_group["title"]}" duplicated as "{new_title}" (reused existing blocks)', 'success')
     return redirect(url_for('templates_.templates'))
 
 @bp.route('/templates/export/all')
