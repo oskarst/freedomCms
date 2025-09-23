@@ -113,6 +113,51 @@ def delete_block(template_id: int):
     flash(f'Template block "{row["title"]}" deleted', 'success')
     return redirect(url_for('templates_.blocks'))
 
+@bp.route('/templates/blocks/<int:template_id>/duplicate', methods=['POST'])
+@login_required
+@admin_required
+def duplicate_block(template_id: int):
+    """Duplicate a template block"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Get the original template block
+    cursor.execute('SELECT * FROM page_template_defs WHERE id = ?', (template_id,))
+    original_block = cursor.fetchone()
+    
+    if not original_block:
+        flash('Template block not found', 'error')
+        return redirect(url_for('templates_.blocks'))
+    
+    # Create new title and slug
+    new_title = f"{original_block['title']} (Copy)"
+    new_slug = slugify(new_title)
+    
+    # Ensure unique slug
+    counter = 1
+    base_slug = new_slug
+    while True:
+        cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (new_slug,))
+        if not cursor.fetchone():
+            break
+        new_slug = f"{base_slug}-{counter}"
+        counter += 1
+    
+    # Get the next sort order
+    cursor.execute('SELECT MAX(sort_order) FROM page_template_defs')
+    max_sort = cursor.fetchone()[0] or 0
+    new_sort_order = max_sort + 1
+    
+    # Insert new template block
+    cursor.execute('''
+        INSERT INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters)
+        VALUES (?, ?, ?, ?, 0, ?, ?)
+    ''', (new_title, new_slug, original_block['category'], original_block['content'], new_sort_order, original_block['default_parameters']))
+    
+    db.commit()
+    flash(f'Template block "{original_block["title"]}" duplicated as "{new_title}"', 'success')
+    return redirect(url_for('templates_.blocks'))
+
 @bp.route('/templates/blocks/add', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -413,6 +458,86 @@ def delete_template_group(group_id: int):
     cursor.execute('DELETE FROM template_groups WHERE id = ?', (group_id,))
     db.commit()
     flash(f'Template "{row["title"]}" deleted', 'success')
+    return redirect(url_for('templates_.templates'))
+
+@bp.route('/templates/groups/<int:group_id>/duplicate', methods=['POST'])
+@login_required
+@admin_required
+def duplicate_template_group(group_id: int):
+    """Duplicate a template group with all its blocks"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Get the original template group
+    cursor.execute('SELECT * FROM template_groups WHERE id = ?', (group_id,))
+    original_group = cursor.fetchone()
+    
+    if not original_group:
+        flash('Template group not found', 'error')
+        return redirect(url_for('templates_.templates'))
+    
+    # Create new title and slug
+    new_title = f"{original_group['title']} (Copy)"
+    new_slug = slugify(new_title)
+    
+    # Ensure unique slug
+    counter = 1
+    base_slug = new_slug
+    while True:
+        cursor.execute('SELECT id FROM template_groups WHERE slug = ?', (new_slug,))
+        if not cursor.fetchone():
+            break
+        new_slug = f"{base_slug}-{counter}"
+        counter += 1
+    
+    # Insert new template group
+    cursor.execute('''
+        INSERT INTO template_groups (title, slug, description, is_default, is_default_page, is_default_blog)
+        VALUES (?, ?, ?, 0, 0, 0)
+    ''', (new_title, new_slug, original_group['description']))
+    new_group_id = cursor.lastrowid
+    
+    # Get all blocks from the original group
+    cursor.execute('''
+        SELECT d.id, d.title, d.slug, d.category, d.content, d.default_parameters, tgb.sort_order
+        FROM template_group_blocks tgb
+        JOIN page_template_defs d ON tgb.template_id = d.id
+        WHERE tgb.group_id = ?
+        ORDER BY tgb.sort_order
+    ''', (group_id,))
+    original_blocks = cursor.fetchall()
+    
+    # Duplicate each block and add to new group
+    for block in original_blocks:
+        # Create new block title and slug
+        new_block_title = f"{block['title']} (Copy)"
+        new_block_slug = slugify(new_block_title)
+        
+        # Ensure unique block slug
+        counter = 1
+        base_block_slug = new_block_slug
+        while True:
+            cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (new_block_slug,))
+            if not cursor.fetchone():
+                break
+            new_block_slug = f"{base_block_slug}-{counter}"
+            counter += 1
+        
+        # Insert new block
+        cursor.execute('''
+            INSERT INTO page_template_defs (title, slug, category, content, is_default, sort_order, default_parameters)
+            VALUES (?, ?, ?, ?, 0, ?, ?)
+        ''', (new_block_title, new_block_slug, block['category'], block['content'], block['sort_order'], block['default_parameters']))
+        new_block_id = cursor.lastrowid
+        
+        # Add block to new group
+        cursor.execute('''
+            INSERT INTO template_group_blocks (group_id, template_id, sort_order)
+            VALUES (?, ?, ?)
+        ''', (new_group_id, new_block_id, block['sort_order']))
+    
+    db.commit()
+    flash(f'Template group "{original_group["title"]}" duplicated as "{new_title}"', 'success')
     return redirect(url_for('templates_.templates'))
 
 @bp.route('/templates/export/all')
