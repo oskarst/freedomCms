@@ -25,6 +25,7 @@
                         <table class="table table-striped">
                             <thead>
                                 <tr>
+                                    <th style="width:40px"></th>
                                     <th>Order</th>
                                     <th>Title</th>
                                     <th>Slug</th>
@@ -33,9 +34,10 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="globalBlocks">
                                 {% for b in blocks %}
-                                <tr>
+                                <tr draggable="true" data-template-id="{{ b.id }}">
+                                    <td class="text-muted"><i class="bi bi-grip-vertical"></i></td>
                                     <td><span class="badge bg-light text-dark">#{{ b.sort_order }}</span></td>
                                     <td>{{ b.title }}</td>
                                     <td><code>{{ b.slug }}</code></td>
@@ -86,4 +88,36 @@
 </div>
 {% endblock %}
 
+{% block extra_scripts %}
+<script>
+(function() {
+    const tbody = document.getElementById('globalBlocks');
+    if (!tbody) return;
+    let draggingEl = null;
+    tbody.addEventListener('dragstart', function(e) {
+        const tr = e.target.closest('tr');
+        if (!tr) return;
+        draggingEl = tr;
+        e.dataTransfer.effectAllowed = 'move';
+    });
+    tbody.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        const tr = e.target.closest('tr');
+        if (!tr || tr === draggingEl) return;
+        const rect = tr.getBoundingClientRect();
+        const after = (e.clientY - rect.top) / rect.height > 0.5;
+        if (after) tr.after(draggingEl); else tr.before(draggingEl);
+    });
+    tbody.addEventListener('drop', function() {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const payload = { items: rows.map((row, idx) => ({ template_id: row.getAttribute('data-template-id'), sort_order: idx + 1 })) };
+        fetch('{{ url_for('templates_.reorder_global_blocks') }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).catch(()=>{});
+    });
+})();
+</script>
+{% endblock %}
 

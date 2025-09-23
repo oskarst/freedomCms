@@ -87,6 +87,7 @@
                         <table class="table table-striped">
                             <thead>
                                 <tr>
+                                    <th style="width:40px"></th>
                                     <th>Title</th>
                                     <th>Slug</th>
                                     <th>Category</th>
@@ -94,9 +95,10 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="groupBlocks" data-group-id="{{ group.id }}">
                                 {% for b in group_blocks %}
-                                <tr>
+                                <tr draggable="true" data-membership-id="{{ b.membership_id }}">
+                                    <td class="text-muted"><i class="bi bi-grip-vertical"></i></td>
                                     <td>{{ b.title }}</td>
                                     <td><code>{{ b.slug }}</code></td>
                                     <td>
@@ -193,6 +195,37 @@
 
 {% block extra_scripts %}
 <script>
+// Drag-and-drop for group blocks
+(function() {
+    const tbody = document.getElementById('groupBlocks');
+    if (!tbody) return;
+    let draggingEl = null;
+    tbody.addEventListener('dragstart', function(e) {
+        const tr = e.target.closest('tr');
+        if (!tr) return;
+        draggingEl = tr;
+        e.dataTransfer.effectAllowed = 'move';
+    });
+    tbody.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        const tr = e.target.closest('tr');
+        if (!tr || tr === draggingEl) return;
+        const rect = tr.getBoundingClientRect();
+        const after = (e.clientY - rect.top) / rect.height > 0.5;
+        if (after) tr.after(draggingEl); else tr.before(draggingEl);
+    });
+    tbody.addEventListener('drop', function() {
+        // Recompute sort orders and send to server
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const payload = { items: rows.map((row, idx) => ({ membership_id: row.getAttribute('data-membership-id'), sort_order: idx + 1 })) };
+        fetch("{{ url_for('templates_.reorder_group_blocks', group_id=group.id) }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).catch(()=>{});
+    });
+})();
+
 document.getElementById('nb_title').addEventListener('input', function() {
     const title = this.value;
     const slug = title.toLowerCase()

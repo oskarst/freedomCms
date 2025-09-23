@@ -50,6 +50,42 @@ def templates():
     groups = cursor.fetchall()
     return render_template('templates/templates.html', groups=groups)
 
+@bp.route('/templates/groups/<int:group_id>/reorder', methods=['POST'])
+@login_required
+@admin_required
+def reorder_group_blocks(group_id: int):
+    """Persist drag-and-drop reordering of blocks within a template group"""
+    db = get_db()
+    cursor = db.cursor()
+    data = request.get_json(silent=True) or {}
+    items = data.get('items') or []
+    for item in items:
+        try:
+            cursor.execute('UPDATE template_group_blocks SET sort_order = ? WHERE id = ? AND group_id = ?',
+                           (int(item.get('sort_order')), int(item.get('membership_id')), group_id))
+        except Exception:
+            continue
+    db.commit()
+    return {'status': 'ok'}
+
+@bp.route('/templates/blocks/reorder', methods=['POST'])
+@login_required
+@admin_required
+def reorder_global_blocks():
+    """Persist drag-and-drop reordering of global template blocks (page_template_defs.sort_order)"""
+    db = get_db()
+    cursor = db.cursor()
+    data = request.get_json(silent=True) or {}
+    items = data.get('items') or []
+    for item in items:
+        try:
+            cursor.execute('UPDATE page_template_defs SET sort_order = ? WHERE id = ?',
+                           (int(item.get('sort_order')), int(item.get('template_id'))))
+        except Exception:
+            continue
+    db.commit()
+    return {'status': 'ok'}
+
 @bp.route('/templates/blocks')
 @login_required
 @admin_required
