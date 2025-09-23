@@ -339,11 +339,11 @@ def generate_page_html(page_id, preview=False):
         if content and '{{' in content:
             # First replace user-defined parameters
             if parameters:
+                import re as _re_params
                 for param_name, param_value in parameters.items():
-                    content = content.replace(f'{{{{ {param_name} }}}}', param_value)
-                    content = content.replace(f'{{{{{param_name}}}}}', param_value)
-                    content = content.replace(f'{{{{ {param_name.strip()} }}}}', param_value)
-                    content = content.replace(f'{{{{{param_name.strip()}}}}}', param_value)
+                    # Replace both typed and untyped placeholders, e.g. {{ name }} and {{ name:wysiwyg }}
+                    pattern = _re_params.compile(r"\{\{\s*" + _re_params.escape(param_name) + r"(?:\s*:[^}]+)?\s*\}\}")
+                    content = pattern.sub(str(param_value), content)
             # Then replace special tokens (blog/page)
             content = replace_special_tokens(content)
         
