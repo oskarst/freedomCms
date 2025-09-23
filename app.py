@@ -40,6 +40,20 @@ def create_app():
     @app.context_processor
     def inject_csrf_token():
         return {'csrf_token': session.get('csrf_token', '')}
+    
+    @app.context_processor
+    def inject_base_url():
+        """Inject base_url into all templates"""
+        from cms.db import get_db
+        try:
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute('SELECT value FROM settings WHERE key = ?', ('base_url',))
+            base_url_row = cursor.fetchone()
+            base_url = base_url_row['value'] if base_url_row else 'http://localhost:5000'
+            return {'base_url': base_url}
+        except:
+            return {'base_url': 'http://localhost:5000'}
 
     # Register blueprints
     app.register_blueprint(auth_bp)
