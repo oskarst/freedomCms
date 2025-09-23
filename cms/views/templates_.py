@@ -497,9 +497,9 @@ def duplicate_template_group(group_id: int):
     ''', (new_title, new_slug, original_group['description']))
     new_group_id = cursor.lastrowid
     
-    # Get all blocks from the original group (reuse existing block definitions)
+    # Get all blocks from the original group (reuse existing block definitions by slug)
     cursor.execute('''
-        SELECT d.id AS block_id, tgb.sort_order
+        SELECT d.slug AS block_slug, tgb.sort_order
         FROM template_group_blocks tgb
         JOIN page_template_defs d ON tgb.template_id = d.id
         WHERE tgb.group_id = ?
@@ -507,12 +507,18 @@ def duplicate_template_group(group_id: int):
     ''', (group_id,))
     original_blocks = cursor.fetchall()
 
-    # Attach the same blocks (by id) to the new group preserving order
+    # Attach blocks by resolving their current id from slug (slug is the stable key)
     for block in original_blocks:
+        cursor.execute('SELECT id FROM page_template_defs WHERE slug = ?', (block['block_slug'],))
+        found = cursor.fetchone()
+        if not found:
+            # If block missing by slug, skip safely (keeps duplication robust)
+            continue
+        block_id = found['id']
         cursor.execute('''
             INSERT INTO template_group_blocks (group_id, template_id, sort_order)
             VALUES (?, ?, ?)
-        ''', (new_group_id, block['block_id'], block['sort_order']))
+        ''', (new_group_id, block_id, block['sort_order']))
     
     db.commit()
     flash(f'Template group "{original_group["title"]}" duplicated as "{new_title}" (reused existing blocks)', 'success')
