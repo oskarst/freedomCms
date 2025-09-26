@@ -93,7 +93,12 @@
                                     <td>
                                         <input type="checkbox" class="form-check-input page-checkbox" name="selected_pages" value="{{ page.id }}">
                                     </td>
-                                    <td>{{ page.title }}</td>
+                                    <td>
+                                        {{ page.title }}
+                                        {% if page.is_blog_container %}
+                                            <span class="badge bg-info ms-2">Used for Blog</span>
+                                        {% endif %}
+                                    </td>
                                     <td><code>{{ page.slug }}</code></td>
                                     <td>
                                         {% if page.published %}
