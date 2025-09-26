@@ -36,6 +36,26 @@ def settings():
                              (value, setting_key))
 
         db.commit()
+
+        # After saving settings, republish all published pages and blogs
+        try:
+            from ..db import get_db as _get_db
+            from ..services.publisher import generate_page_html
+            _db = _get_db()
+            _cursor = _db.cursor()
+            _cursor.execute('SELECT id FROM pages WHERE published = 1')
+            to_publish = _cursor.fetchall()
+            republished = 0
+            for row in to_publish:
+                try:
+                    generate_page_html(row['id'])
+                    republished += 1
+                except Exception:
+                    continue
+            flash(f'Settings updated. Publisher ran for {republished} page(s).', 'info')
+        except Exception:
+            flash('Settings updated. Publisher run skipped due to an error.', 'warning')
+
         flash('Settings updated successfully', 'success')
         return redirect(url_for('settings.settings'))
 
