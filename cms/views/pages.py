@@ -21,7 +21,8 @@ def cleanup_old_previews(page_id, current_filename=None):
     from ..db import PUB_DIR
     
     # Remove old preview files for this page, but not the current one
-    pattern = os.path.join(PUB_DIR, f'preview_{page_id}_*.html')
+    preview_dir = os.path.join(PUB_DIR, 'preview')
+    pattern = os.path.join(preview_dir, f'preview_{page_id}_*.html')
     old_files = glob.glob(pattern)
     for file_path in old_files:
         # Don't delete the current file
@@ -1164,7 +1165,9 @@ def preview_page(page_id):
     
     # Create a temporary preview file
     preview_filename = f'preview_{page_id}_{session.get("csrf_token", "temp")}.html'
-    preview_path = os.path.join(PUB_DIR, preview_filename)
+    preview_dir = os.path.join(PUB_DIR, 'preview')
+    os.makedirs(preview_dir, exist_ok=True)
+    preview_path = os.path.join(preview_dir, preview_filename)
     
     try:
         # Rewrite absolute image paths to relative paths for preview
@@ -1183,7 +1186,7 @@ def preview_page(page_id):
     
     # Redirect to the preview file served from pub directory
     from flask import redirect, url_for
-    return redirect(f'/pub/{preview_filename}')
+    return redirect(f'/pub/preview/{preview_filename}')
 
 @bp.route('/pages/<int:page_id>/publish', methods=['POST'])
 @login_required
