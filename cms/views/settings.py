@@ -30,6 +30,8 @@ def settings():
 
         # Then update all submitted settings
         for key, value in request.form.items():
+            if key == '_csrf_token':
+                continue
             if key.startswith('setting_'):
                 setting_key = key[8:]  # Remove 'setting_' prefix
                 cursor.execute('UPDATE settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',

@@ -5,12 +5,14 @@
 <div class="container-fluid">
     <!-- Add Template Block Form (Independent) -->
     <form method="post" action="{{ url_for('pages.edit_page', page_id=page.id) }}" class="d-none" id="addTemplateForm" onsubmit="return validateTemplateSelection(this)">
+        {{ csrf_field() }}
         <input type="hidden" name="action" value="add_template">
         <input type="hidden" name="template_id" id="selectedTemplateId">
     </form>
 
     <!-- Remove Template Form (Independent) -->
     <form method="post" action="{{ url_for('pages.edit_page', page_id=page.id) }}" class="d-none" id="removeTemplateForm">
+        {{ csrf_field() }}
         <input type="hidden" name="action" value="remove_template">
         <input type="hidden" name="page_template_id" id="removeTemplateId">
     </form>
@@ -19,6 +21,7 @@
     <div class="row mb-3">
         <div class="col-12">
             <form method="post" style="display: inline;">
+                {{ csrf_field() }}
                 <input type="hidden" name="action" value="toggle_mode">
                 <button type="submit" class="btn btn-outline-primary btn-sm">
                     <i class="bi bi-{% if page.mode == 'simple' %}gear{% else %}eye{% endif %}"></i> 
@@ -30,6 +33,7 @@
     </div>
 
     <form method="post" id="pageForm" onsubmit="return validatePageForm()" enctype="multipart/form-data">
+        {{ csrf_field() }}
         <input type="hidden" name="action" value="save">
 
         <div class="row">

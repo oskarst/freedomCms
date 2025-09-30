@@ -13,6 +13,7 @@
                         <a href="{{ url_for('pages.pages', type='blog') }}" class="btn btn-outline-secondary{% if page_type == 'blog' %} active{% endif %}">Blog</a>
                     </div>
                     <form method="post" action="{{ url_for('pages.export_selected_pages') }}" id="exportSelectedForm" style="display: none;">
+                        {{ csrf_field() }}
                         <input type="hidden" name="action" value="export_selected">
                     </form>
                     <button type="button" id="exportSelectedBtn" class="btn btn-success" style="display: none;">
@@ -25,6 +26,7 @@
                         <i class="bi bi-upload"></i> Import
                     </button>
                     <form method="post" action="{{ (url_for('pages.republish_all_pages', type=page_type) if page_type else url_for('pages.republish_all_pages')) }}" class="d-inline" onsubmit="return confirm('{{ 'This will republish all blogs. Are you sure?' if page_type == 'blog' else 'This will republish all pages. Are you sure?' }}')">
+                        {{ csrf_field() }}
                         <button type="submit" class="btn btn-warning">
                             <i class="bi bi-arrow-clockwise"></i> {{ 'Re-publish All Blogs' if page_type == 'blog' else 'Re-publish All Pages' }}
                         </button>
@@ -44,6 +46,7 @@
                     {% if page_type == 'blog' %}
                     <div class="mb-3 p-3 border rounded bg-light">
                         <form class="row g-2" method="post" action="{{ url_for('pages.pages', type='blog') }}">
+                            {{ csrf_field() }}
                             <div class="col-auto">
                                 <label class="col-form-label fw-bold">Categories</label>
                             </div>
@@ -59,7 +62,8 @@
                                 {% for cat in blog_categories %}
                                     <span class="badge bg-secondary me-1">
                                         {{ cat.title }}
-                                        <form method="post" action="{{ url_for('pages.pages', type='blog') }}" style="display:inline">
+                                <form method="post" action="{{ url_for('pages.pages', type='blog') }}" style="display:inline">
+                                    {{ csrf_field() }}
                                             <input type="hidden" name="action" value="delete_category">
                                             <input type="hidden" name="category_id" value="{{ cat.id }}">
                                             <button type="submit" class="btn btn-sm btn-light ms-1 p-0 px-1">x</button>
@@ -124,12 +128,14 @@
                                         </a>
                                         <form method="post" action="{{ url_for('pages.duplicate_page', page_id=page.id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to duplicate this page?')">
+                                            {{ csrf_field() }}
                                             <button type="submit" class="btn btn-sm btn-outline-warning">
                                                 <i class="bi bi-files"></i> Duplicate
                                             </button>
                                         </form>
                                         {% if page.published %}
                                         <form method="post" action="{{ url_for('pages.publish_page', page_id=page.id) }}" class="d-inline">
+                                            {{ csrf_field() }}
                                             <input type="hidden" name="from_list" value="1">
                                             <input type="hidden" name="page_type" value="{{ page_type }}">
                                             <input type="hidden" name="action" value="publish">
@@ -139,6 +145,7 @@
                                         </form>
                                         {% else %}
                                         <form method="post" action="{{ url_for('pages.publish_page', page_id=page.id) }}" class="d-inline">
+                                            {{ csrf_field() }}
                                             <input type="hidden" name="from_list" value="1">
                                             <input type="hidden" name="page_type" value="{{ page_type }}">
                                             <input type="hidden" name="action" value="publish">
@@ -149,6 +156,7 @@
                                         {% endif %}
                                         <form method="post" action="{{ url_for('pages.delete_page', page_id=page.id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this page?')">
+                                            {{ csrf_field() }}
                                             <button type="submit" class="btn btn-sm btn-outline-danger">
                                                 <i class="bi bi-trash"></i> Delete
                                             </button>
@@ -174,6 +182,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" enctype="multipart/form-data" action="{{ url_for('pages.pages') }}">
+                {{ csrf_field() }}
                 <input type="hidden" name="action" value="import">
                 <div class="modal-body">
                     <div class="mb-3">

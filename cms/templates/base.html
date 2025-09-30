@@ -83,6 +83,22 @@
 
     {% block content %}{% endblock %}
 
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const csrfToken = '{{ csrf_token }}';
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                const hasTokenField = form.querySelector('input[name="_csrf_token"]');
+                if (!hasTokenField) {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = '_csrf_token';
+                    hidden.value = csrfToken;
+                    form.appendChild(hidden);
+                }
+            });
+        });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_scripts %}{% endblock %}
 </body>

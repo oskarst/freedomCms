@@ -20,6 +20,7 @@
                 </div>
                 <div class="card-body">
                     <form method="post">
+                        {{ csrf_field() }}
                         {% for setting in settings %}
                         <div class="mb-3">
                             <label for="setting_{{ setting.key }}" class="form-label">{{ setting.description or setting.key }}</label>

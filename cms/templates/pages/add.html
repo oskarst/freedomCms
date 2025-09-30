@@ -22,6 +22,7 @@
                 </div>
                 <div class="card-body">
                     <form method="post">
+                        {{ csrf_field() }}
                         <div class="mb-3">
                             <label for="title" class="form-label">Page Title *</label>
                             <input type="text" class="form-control" id="title" name="title" required>

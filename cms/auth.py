@@ -9,6 +9,12 @@ from .db import get_db, check_password
 
 bp = Blueprint('auth', __name__)
 
+def csrf_exempt(view_func):
+    """Decorator to mark a view as exempt from CSRF validation."""
+    view_func._csrf_exempt = True
+    return view_func
+
+
 def login_required(f):
     """Decorator to require login for routes"""
     @wraps(f)
@@ -87,6 +93,7 @@ def login():
                     {% endwith %}
 
                     <form method="post">
+                        {{ csrf_field() }}
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
                             <input type="text" class="form-control" id="username" name="username" required>

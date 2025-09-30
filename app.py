@@ -4,10 +4,11 @@ Main application factory for Devall CMS
 """
 
 import os
-from flask import Flask, session
+from flask import Flask, session, request, abort
 import secrets
+from markupsafe import Markup
 from cms.db import init_db, close_connection, APP_SECRET, PUB_DIR
-from cms.auth import bp as auth_bp, login_required
+from cms.auth import bp as auth_bp, login_required, csrf_exempt
 from cms.views.pages import bp as pages_bp
 from cms.views.templates_ import bp as templates_bp
 from cms.views.users import bp as users_bp
@@ -37,9 +38,37 @@ def create_app():
         if 'csrf_token' not in session:
             session['csrf_token'] = secrets.token_hex(16)
 
+    @app.before_request
+    def validate_csrf_token():
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            view_func = app.view_functions.get(request.endpoint)
+            if view_func and getattr(view_func, '_csrf_exempt', False):
+                return
+
+            expected_token = session.get('csrf_token')
+            submitted_token = (
+                request.form.get('_csrf_token')
+                or request.headers.get('X-CSRFToken')
+                or request.headers.get('X-CSRF-Token')
+            )
+
+            if submitted_token is None and request.is_json:
+                json_payload = request.get_json(silent=True) or {}
+                submitted_token = json_payload.get('_csrf_token')
+
+            if not expected_token or not submitted_token or submitted_token != expected_token:
+                abort(400, description='Invalid CSRF token')
+
     @app.context_processor
     def inject_csrf_token():
-        return {'csrf_token': session.get('csrf_token', '')}
+        token = session.get('csrf_token', '')
+
+        def csrf_field():
+            if not token:
+                return ''
+            return Markup(f'<input type="hidden" name="_csrf_token" value="{token}">')
+
+        return {'csrf_token': token, 'csrf_field': csrf_field}
     
     @app.context_processor
     def inject_base_url():
@@ -106,6 +135,7 @@ def create_app():
     from flask import send_from_directory
 
     @app.route('/pub/<path:filename>')
+    @csrf_exempt
     def serve_pub(filename):
         return send_from_directory(PUB_DIR, filename)
 

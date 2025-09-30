@@ -80,8 +80,15 @@ def generate_page_html(page_id, preview=False):
         base_url_row = cursor.fetchone()
         base_url = base_url_row['value'] if base_url_row else 'http://localhost:5000'
         
-        content_out = content_out.replace('{{page:featured:png}}', f"{base_url}{featured_png_url}")
-        content_out = content_out.replace('{{page:featured:webp}}', f"{base_url}{featured_webp_url}")
+        def _build_media_url(path: str) -> str:
+            if not path:
+                return ''
+            if path.lower().startswith(('http://', 'https://')):
+                return path
+            return f"{base_url}{path}"
+
+        content_out = content_out.replace('{{page:featured:png}}', _build_media_url(featured_png_url))
+        content_out = content_out.replace('{{page:featured:webp}}', _build_media_url(featured_webp_url))
 
         # Config tokens
         # {{config:base_url}}
@@ -129,7 +136,13 @@ def generate_page_html(page_id, preview=False):
             
             cursor.execute('SELECT value FROM settings WHERE key = ?', ('blog_articles_per_page',))
             per_page_row = cursor.fetchone()
-            articles_per_page = int(per_page_row['value']) if per_page_row else 20
+            try:
+                articles_per_page = int(per_page_row['value']) if per_page_row else 20
+            except (TypeError, ValueError):
+                articles_per_page = 20
+
+            if articles_per_page < 1:
+                articles_per_page = 1
             
             cursor.execute(
                 """
