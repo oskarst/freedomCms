@@ -303,6 +303,12 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add page_id column to media table if it doesn't exist
+    try:
+        cursor.execute('ALTER TABLE media ADD COLUMN page_id INTEGER')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Insert default admin user if not exists
     cursor.execute('SELECT COUNT(*) FROM users WHERE username = ?', ('admin',))
     if cursor.fetchone()[0] == 0:

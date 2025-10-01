@@ -22,6 +22,11 @@
                      style="cursor: pointer;" onclick="openImageModal({{ m.id }})">
                 <div class="card-body p-2">
                     <div class="small text-truncate" title="{{ m.title }}">{{ m.title }}</div>
+                    {% if m.page_title %}
+                    <div class="small text-muted">
+                        <i class="bi bi-file-earmark"></i> {{ m.page_title }}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="overlay p-1">
                     <div class="url-container">

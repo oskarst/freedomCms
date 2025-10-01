@@ -911,6 +911,28 @@ function toggleDefaultContent(checkbox, textareaId) {
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
+        <!-- Upload Section -->
+        <div class="mb-4 border-bottom pb-3">
+          <h6 class="mb-3">Upload New Image</h6>
+          <form id="mediaUploadForm" enctype="multipart/form-data">
+            <input type="hidden" name="page_id" value="{{ page.id }}">
+            <div class="row">
+              <div class="col-md-6">
+                <input class="form-control mb-2" type="file" name="image" accept="image/*" required>
+              </div>
+              <div class="col-md-3">
+                <input class="form-control mb-2" type="text" name="title" placeholder="Title (optional)">
+              </div>
+              <div class="col-md-3">
+                <input class="form-control mb-2" type="text" name="alt" placeholder="Alt text (optional)">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Upload & Insert</button>
+          </form>
+        </div>
+
+        <!-- Media Grid -->
+        <h6 class="mb-3">Choose from existing images</h6>
         <div class="row" id="mediaPickerGrid"></div>
       </div>
       <div class="modal-footer">
@@ -1054,6 +1076,67 @@ function openMediaPicker(targetTextareaId) {
         modal.show();
     });
 }
+
+// Handle media upload form
+document.getElementById('mediaUploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+
+    submitBtn.textContent = 'Uploading...';
+    submitBtn.disabled = true;
+
+    fetch('{{ url_for("media.media_upload") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Add the new media to the mediaData and refresh the grid
+            mediaData[data.media.id] = data.media;
+
+            // Refresh the media grid
+            const grid = document.getElementById('mediaPickerGrid');
+            const col = document.createElement('div');
+            col.className = 'col-6 col-md-3 mb-3';
+            col.innerHTML = `<div class="card h-100 position-relative media-picker-card">
+                <img src="${data.media.small || data.media.orig}" class="card-img-top" alt="${data.media.alt}"
+                     style="cursor: pointer; height: 150px; object-fit: cover;"
+                     onclick="openImageSizeModal(${data.media.id})">
+                <div class="card-body p-2">
+                  <div class="small text-truncate" title="${data.media.title}">${data.media.title}</div>
+                </div>
+                <div class="overlay p-1">
+                  <div class="url-container">
+                    <div class="url-item">
+                      <button type="button" class="btn btn-sm btn-primary w-100" onclick="openImageSizeModal(${data.media.id})">Choose image size</button>
+                    </div>
+                  </div>
+                </div>
+              </div>`;
+            grid.insertBefore(col, grid.firstChild);
+
+            // Reset form
+            this.reset();
+
+            // Auto-open the image size modal for the newly uploaded image
+            setTimeout(() => openImageSizeModal(data.media.id), 100);
+        } else {
+            alert('Upload failed: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Upload error:', error);
+        alert('Upload failed. Please try again.');
+    })
+    .finally(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+});
 
 // Store media data for image size modal
 let mediaData = {};
