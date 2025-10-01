@@ -326,6 +326,7 @@ def init_db():
         ('ai_api_key', '', 'AI API key'),
         ('ai_monthly_budget', '20', 'Monthly AI usage budget in USD'),
         ('ai_model', 'gpt-4o-mini', 'AI model identifier (e.g. gpt-4o-mini)'),
+        ('wysiwyg_stylesheets', '', 'Comma-separated list of stylesheet URLs to load in WYSIWYG preview'),
     ]
     for key, value, desc in default_settings:
         cursor.execute('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)',
