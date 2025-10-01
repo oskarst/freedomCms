@@ -724,6 +724,8 @@ def edit_page(page_id):
             # Author and published date (blog only)
             page_author = request.form.get('page_author', '').strip()
             page_published_date = request.form.get('page_published_date', '').strip()
+            # Custom CSS (pages and blogs)
+            page_custom_css = request.form.get('page_custom_css', '').strip()
             
             if not page_title:
                 flash('Page title is required', 'error')
@@ -781,11 +783,11 @@ def edit_page(page_id):
 
             # Update page title, slug, blog container flag, excerpt, author, published_date and featured image paths
             if featured_png or featured_webp:
-                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, author = ?, published_date = ?, featured_png = ?, featured_webp = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
-                             (page_title, page_slug, is_blog_container, page_excerpt, page_author, page_published_date, featured_png, featured_webp, page_id))
+                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, author = ?, published_date = ?, custom_css = ?, featured_png = ?, featured_webp = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+                             (page_title, page_slug, is_blog_container, page_excerpt, page_author, page_published_date, page_custom_css, featured_png, featured_webp, page_id))
             else:
-                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, author = ?, published_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
-                             (page_title, page_slug, is_blog_container, page_excerpt, page_author, page_published_date, page_id))
+                cursor.execute('UPDATE pages SET title = ?, slug = ?, is_blog_container = ?, excerpt = ?, author = ?, published_date = ?, custom_css = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+                             (page_title, page_slug, is_blog_container, page_excerpt, page_author, page_published_date, page_custom_css, page_id))
             
             # Update page templates
             cursor.execute('SELECT pt.id, pt.template_id, pt.use_default, pt.sort_order FROM page_templates pt WHERE pt.page_id = ? ORDER BY pt.sort_order', (page_id,))

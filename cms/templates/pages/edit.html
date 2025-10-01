@@ -228,6 +228,24 @@
         </div>
 
         {% if page.mode == 'advanced' %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Custom CSS</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="page_custom_css" class="form-label fw-bold">Custom CSS</label>
+                            <textarea class="form-control code-css" id="page_custom_css" name="page_custom_css" rows="6" placeholder="/* Optional page-specific CSS */">{{ page.custom_css or '' }}</textarea>
+                            <div class="form-text">Optional CSS applied only to this {{ 'blog post' if page.type == 'blog' else 'page' }} when published.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if page.mode == 'advanced' %}
         <div class="row">
             <div class="col-12">
                 <div class="card">
@@ -1458,7 +1476,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 cm.refresh();
             }, 100);
         });
-        
+
+        // Initialize CodeMirror for custom CSS textarea
+        const customCssTextarea = document.getElementById('page_custom_css');
+        if (customCssTextarea) {
+            const cmCss = CodeMirror.fromTextArea(customCssTextarea, {
+                mode: 'css',
+                theme: 'neo',
+                lineNumbers: true,
+                viewportMargin: Infinity,
+                lineWrapping: true
+            });
+            customCssTextarea._cm = cmCss;
+            customCssTextarea.style.display = 'none';
+            setTimeout(() => cmCss.refresh(), 100);
+        }
+
         // Initialize CodeMirror for parameter code editors
         document.querySelectorAll('textarea.code-html[class*="param"]').forEach(function(ta) {
             const cm = CodeMirror.fromTextArea(ta, {

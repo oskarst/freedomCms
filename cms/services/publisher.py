@@ -333,6 +333,7 @@ def generate_page_html(page_id, preview=False):
 
     # Build HTML content
     html_content = ''
+    custom_css = page['custom_css'] if 'custom_css' in page.keys() else ''
     for pt in page_templates:
         # Use the content based on user's choice (use_default flag)
         if pt['use_default']:
@@ -366,6 +367,8 @@ def generate_page_html(page_id, preview=False):
         # Return HTML directly for preview
         return html_content
     else:
+        if custom_css:
+            html_content += f"\n<style id=\"page-custom-css\">{custom_css}</style>"
         # Save to file
         # Blog posts go under pub/blog/, other pages in pub/
         if 'type' in page.keys() and page['type'] == 'blog':
