@@ -308,6 +308,11 @@
                                                                   placeholder="Enter code for {{ param_info.name }}">{{ pt.parameters.get(param_info.name, '') }}</textarea>
                                                     {% elif param_info.type == 'wysiwyg' %}
                                                         <div class="wysiwyg-editor" data-target="param_{{ pt.id }}_{{ param_info.name }}">
+                                                            <div class="d-flex justify-content-end mb-2">
+                                                                <button type="button" class="btn btn-sm btn-outline-secondary toggle-wysiwyg-code" data-quill-id="quill_{{ pt.id }}_{{ param_info.name }}">
+                                                                    <i class="bi bi-code-slash"></i> Edit HTML
+                                                                </button>
+                                                            </div>
                                                             <div class="quill-container" id="quill_{{ pt.id }}_{{ param_info.name }}"></div>
                                                             <textarea class="form-control form-control-sm wysiwyg-textarea" 
                                                                       name="param_{{ pt.id }}_{{ param_info.name }}" 
@@ -382,6 +387,11 @@
                                                   placeholder="Enter code for {{ param_info.name }}">{{ pt.parameters.get(param_info.name, '') }}</textarea>
                                     {% elif param_info.type == 'wysiwyg' %}
                                         <div class="wysiwyg-editor" data-target="param_{{ pt.id }}_{{ param_info.name }}">
+                                            <div class="d-flex justify-content-end mb-2">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary toggle-wysiwyg-code" data-quill-id="quill_{{ pt.id }}_{{ param_info.name }}">
+                                                    <i class="bi bi-code-slash"></i> Edit HTML
+                                                </button>
+                                            </div>
                                             <div class="quill-container" id="quill_{{ pt.id }}_{{ param_info.name }}"></div>
                                             <textarea class="form-control wysiwyg-textarea" 
                                                       name="param_{{ pt.id }}_{{ param_info.name }}" 
@@ -616,6 +626,14 @@
 .wysiwyg-editor .form-control {
     min-height: 100px;
     resize: vertical;
+}
+
+.wysiwyg-editor.edit-html-mode .quill-container {
+    display: none;
+}
+
+.wysiwyg-editor.edit-html-mode .wysiwyg-textarea {
+    display: block !important;
 }
 
 /* Quill Editor Styling */
@@ -1328,6 +1346,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize CMS block indentation
     initializeIndentation();
     
+    let wysiwygToggleState = {};
+
     // Initialize Quill WYSIWYG editors
     if (window.Quill) {
         document.querySelectorAll('.quill-container').forEach(function(container) {
@@ -1369,6 +1389,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Store reference to Quill instance
                 container._quill = quill;
+
+                // Default to editor mode
+                wysiwygToggleState[textarea.name] = 'visual';
                 
                 // Update textarea when Quill content changes
                 quill.on('text-change', function() {
@@ -1378,6 +1401,42 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Attach toggle handlers for Edit HTML buttons
+    document.querySelectorAll('.toggle-wysiwyg-code').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const quillId = button.getAttribute('data-quill-id');
+            const container = document.getElementById(quillId);
+            if (!container) { return; }
+
+            const wrapper = container.closest('.wysiwyg-editor');
+            const textarea = container.nextElementSibling;
+            if (!textarea) { return; }
+
+            const currentMode = wysiwygToggleState[textarea.name] || 'visual';
+
+            if (currentMode === 'visual') {
+                // Switch to code mode
+                wrapper.classList.add('edit-html-mode');
+                if (container._quill) {
+                    textarea.value = container._quill.root.innerHTML;
+                    container._quill.enable(false);
+                }
+                button.innerHTML = '<i class="bi bi-eye"></i> Back to Editor';
+                wysiwygToggleState[textarea.name] = 'code';
+            } else {
+                // Switch back to visual mode
+                wrapper.classList.remove('edit-html-mode');
+                if (container._quill) {
+                    container._quill.root.innerHTML = textarea.value;
+                    container._quill.enable(true);
+                    container._quill.focus();
+                }
+                button.innerHTML = '<i class="bi bi-code-slash"></i> Edit HTML';
+                wysiwygToggleState[textarea.name] = 'visual';
+            }
+        });
+    });
+
     if (window.CodeMirror) {
         // Initialize CodeMirror for template code editors
         document.querySelectorAll('textarea.code-html').forEach(function(ta) {
