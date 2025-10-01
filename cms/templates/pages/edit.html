@@ -1435,6 +1435,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (initialContent) {
                     quill.root.innerHTML = initialContent;
                 }
+                textarea.dataset.codeHtml = initialContent;
                 
                 // Store reference to Quill instance
                 container._quill = quill;
@@ -1444,7 +1445,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update textarea when Quill content changes
                 quill.on('text-change', function() {
-                    textarea.value = quill.root.innerHTML;
+                    const updatedHtml = quill.root.innerHTML;
+                    textarea.value = updatedHtml;
                 });
             }
         });
@@ -1465,21 +1467,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (currentMode === 'visual') {
                 // Switch to code mode
+                let quillContentHeight = 0;
+                const quillBody = container.querySelector('.ql-container');
+                if (quillBody) {
+                    quillContentHeight = quillBody.getBoundingClientRect().height;
+                } else {
+                    quillContentHeight = container.getBoundingClientRect().height;
+                }
+
                 wrapper.classList.add('edit-html-mode');
+
+                const storedHtml = (textarea.dataset.codeHtml !== undefined)
+                    ? textarea.dataset.codeHtml
+                    : (container._quill ? container._quill.root.innerHTML : textarea.value);
+                textarea.value = storedHtml;
+                textarea.style.height = quillContentHeight ? `${quillContentHeight}px` : '';
+                textarea.style.minHeight = textarea.style.height;
+
                 if (container._quill) {
-                    textarea.value = container._quill.root.innerHTML;
                     container._quill.enable(false);
                 }
+
                 button.innerHTML = '<i class="bi bi-eye"></i> Back to Editor';
                 wysiwygToggleState[textarea.name] = 'code';
             } else {
                 // Switch back to visual mode
                 wrapper.classList.remove('edit-html-mode');
+                const codeHtml = textarea.value;
+                textarea.dataset.codeHtml = codeHtml;
+                textarea.style.height = '';
+                textarea.style.minHeight = '';
+
                 if (container._quill) {
-                    container._quill.root.innerHTML = textarea.value;
+                    container._quill.root.innerHTML = codeHtml;
                     container._quill.enable(true);
                     container._quill.focus();
                 }
+
                 button.innerHTML = '<i class="bi bi-code-slash"></i> Edit HTML';
                 wysiwygToggleState[textarea.name] = 'visual';
             }
@@ -1573,6 +1597,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (targetField) {
                     targetField.value = data.result;
                     if (targetField.classList.contains('wysiwyg-textarea')) {
+                        targetField.dataset.codeHtml = data.result;
                         const quillContainer = targetField.previousElementSibling;
                         if (quillContainer && quillContainer._quill) {
                             quillContainer._quill.root.innerHTML = data.result;
