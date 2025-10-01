@@ -320,7 +320,12 @@ def init_db():
         ('media_medium_width', '640', 'Media medium width (px)'),
         ('media_large_width', '1024', 'Media large width (px)'),
                ('blog_latest_template', '<li class="blog-latest-item">\n<a href="{href}">{title}</a>\n<div class="featured-image">{featured_image}</div>\n<div class="excerpt">{excerpt}</div>\n<a class="btn btn-filled btn-lg mb0" href="{href}">Read More</a>\n</li>', 'Template for {{blog:latest}} shortcode. Should contain only li elements - ul wrapper is added automatically.'),
-               ('blog_articles_per_page', '20', 'Number of blog articles to display per page in {{blog:latest}} shortcode.'),
+        ('blog_articles_per_page', '20', 'Number of blog articles to display per page in {{blog:latest}} shortcode.'),
+        ('ai_provider', 'openai', 'AI Provider identifier (e.g. openai)'),
+        ('ai_api_url', 'https://api.openai.com/v1/chat/completions', 'AI API base URL'),
+        ('ai_api_key', '', 'AI API key'),
+        ('ai_monthly_budget', '20', 'Monthly AI usage budget in USD'),
+        ('ai_model', 'gpt-4o-mini', 'AI model identifier (e.g. gpt-4o-mini)'),
     ]
     for key, value, desc in default_settings:
         cursor.execute('INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)',

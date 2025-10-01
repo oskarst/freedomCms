@@ -36,6 +36,12 @@
                                     Hide system template blocks by default in page editor
                                 </label>
                             </div>
+                            {% elif setting.key in ['ai_provider', 'ai_api_url'] %}
+                            <input type="text" class="form-control" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" value="{{ setting.value }}">
+                            {% elif setting.key == 'ai_api_key' %}
+                            <input type="password" class="form-control" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" value="{{ setting.value }}" placeholder="Enter API key">
+                            {% elif setting.key == 'ai_monthly_budget' %}
+                            <input type="number" step="0.01" min="0" class="form-control" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" value="{{ setting.value or '0' }}">
                             {% elif setting.key == 'blog_latest_template' %}
                             <textarea class="form-control" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" rows="8" placeholder="Template for {{ '{{' }}blog:latest{{ '}}' }} shortcode">{{ setting.value }}</textarea>
                             <div class="form-text">

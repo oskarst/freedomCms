@@ -1280,3 +1280,49 @@ def republish_all_pages():
         flash(f'Successfully republished {republished_count} {label}', 'success')
     
     return redirect(url_for('pages.pages', type=page_type))
+
+@bp.route('/pages/<int:page_id>/ai', methods=['POST'])
+@login_required
+def ai_generate_content(page_id):
+    from flask import jsonify
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('SELECT * FROM pages WHERE id = ?', (page_id,))
+    page = cursor.fetchone()
+    if not page:
+        return jsonify({'error': 'Page not found'}), 404
+
+    prompt = request.form.get('prompt', '').strip()
+    mode = request.form.get('mode', 'content')
+    target_field = request.form.get('target_field', '')
+    include_full_html = request.form.get('include_full_html') == '1'
+    guidance = request.form.get('guidance', '').strip()
+
+    if not prompt:
+        return jsonify({'error': 'Prompt is required'}), 400
+
+    try:
+        from ..services.mcp import call_ai_model, MCPClientError
+        context = None
+        if include_full_html or mode == 'code':
+            cursor.execute('''
+                SELECT pt.custom_content, pt.use_default, t.content as default_content
+                FROM page_templates pt
+                JOIN page_template_defs t ON pt.template_id = t.id
+                WHERE pt.page_id = ?
+                ORDER BY pt.sort_order
+            ''', (page_id,))
+            blocks = cursor.fetchall()
+            html_parts = []
+            for block in blocks:
+                content = block['default_content'] if block['use_default'] else block['custom_content']
+                if content:
+                    html_parts.append(content)
+            context = '\n\n'.join(html_parts)
+        if guidance:
+            prompt = f"{prompt}\n\nGuidance: {guidance}"
+        result = call_ai_model(prompt, mode=mode, context=context)
+    except MCPClientError as exc:
+        return jsonify({'error': str(exc)}), 400
+
+    return jsonify({'result': result, 'target_field': target_field})

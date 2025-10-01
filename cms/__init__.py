@@ -5,6 +5,7 @@ Devall CMS Package
 
 from .db import get_db, init_db, close_connection
 from .utils import slugify, now_iso, fetch_settings
+from .services.mcp import call_ai_model
 
 __all__ = [
     'get_db',
@@ -12,5 +13,6 @@ __all__ = [
     'close_connection',
     'slugify',
     'now_iso',
-    'fetch_settings'
+    'fetch_settings',
+    'call_ai_model'
 ]
