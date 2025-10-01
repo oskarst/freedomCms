@@ -1493,6 +1493,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const aiModeInput = document.getElementById('aiMode');
     const aiStatusAlert = document.getElementById('aiStatusAlert');
     const aiGenerateBtn = document.getElementById('aiGenerateBtn');
+    const aiSpinner = document.getElementById('aiSpinner');
     let aiModal = null;
     if (aiModalEl && window.bootstrap) {
         aiModal = new bootstrap.Modal(aiModalEl);
@@ -1593,6 +1594,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 aiStatusAlert.classList.add('alert-danger');
             } finally {
                 aiGenerateBtn.disabled = false;
+                if (aiSpinner) {
+                    aiSpinner.classList.add('d-none');
+                }
             }
         });
     }
@@ -1781,6 +1785,10 @@ function showCopyError(element) {
           <textarea id="aiPromptTextarea" class="form-control" rows="5" placeholder="Describe the content or code you want the AI to generate..."></textarea>
         </div>
         <div class="alert alert-info d-none" id="aiStatusAlert"></div>
+        <div class="d-flex align-items-center gap-2 d-none" id="aiSpinner">
+          <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+          <span>Contacting AI model...</span>
+        </div>
       </div>
       <div class="modal-footer">
         <input type="hidden" id="aiTargetField">

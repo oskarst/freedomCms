@@ -4,7 +4,7 @@ MCP (Model Content Provider) integration helpers for Devall CMS.
 """
 
 import requests
-import calendar
+import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 from flask import current_app
@@ -98,12 +98,15 @@ def call_ai_model(prompt: str, *, mode: str = 'content', context: Optional[str] 
         payload = {
             'model': settings.get('model') or 'gpt-4o-mini',
             'messages': [
-                {'role': 'system', 'content': 'You are an assistant that helps build CMS content and HTML templates.'},
+                {
+                    'role': 'system',
+                    'content': 'You are an assistant that helps build CMS content and HTML templates. Always return only the raw result with no introductions, explanations, or follow-up text.'
+                },
             ],
         }
         if context:
             payload['messages'].append({'role': 'system', 'content': f'Context HTML:\n{context}'})
-        payload['messages'].append({'role': 'user', 'content': prompt})
+        payload['messages'].append({'role': 'user', 'content': f"{prompt}\n\nReturn only the raw content with no introductions, no closing remarks, and absolutely no markdown fences."})
 
         if mode == 'code':
             payload['response_format'] = {'type': 'json_schema', 'json_schema': {
@@ -119,11 +122,18 @@ def call_ai_model(prompt: str, *, mode: str = 'content', context: Optional[str] 
             }}
     else:
         payload = {
-            'prompt': prompt,
+            'prompt': f"{prompt}\n\nRespond with only the raw content, no explanations, no introductory/closing remarks, and no markdown fences.",
             'mode': mode,
         }
         if context:
             payload['context'] = context
+
+    current_app.logger.info('AI prompt dispatched', extra={
+        'ai_mode': mode,
+        'prompt_preview': prompt[:200],
+        'has_context': bool(context),
+        'context_preview': (context[:200] if context else None)
+    })
 
     headers = {
         'Authorization': f'Bearer {api_key}',
@@ -152,11 +162,28 @@ def call_ai_model(prompt: str, *, mode: str = 'content', context: Optional[str] 
                     result = ''.join(part.get('text', '') for part in content if part.get('type') == 'text')
                 elif isinstance(content, str):
                     result = content
+        if result and mode == 'code' and isinstance(result, str):
+            try:
+                parsed = json.loads(result)
+                if isinstance(parsed, dict) and 'code' in parsed:
+                    result = parsed['code']
+            except json.JSONDecodeError:
+                pass
     else:
         result = data.get('result') if isinstance(data, dict) else None
 
     if not result:
         raise MCPClientError('AI response did not contain result text.')
+
+    # Normalize result: strip Markdown fences if present
+    if isinstance(result, str):
+        trimmed = result.strip()
+        if trimmed.startswith('```') and trimmed.endswith('```'):
+            inner = trimmed[3:-3].strip()
+            newline_index = inner.find('\n')
+            if newline_index != -1 and inner[:newline_index].strip().isalpha():
+                inner = inner[newline_index + 1:].strip()
+            result = inner
 
     # Extract cost if provided
     cost = data.get('cost') if isinstance(data, dict) else None
