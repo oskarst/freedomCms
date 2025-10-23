@@ -30,12 +30,14 @@
                     <li class="nav-item"><a class="nav-link{% if 'pages' in request.endpoint and request.args.get('type') == 'page' %} active{% endif %}" href="{{ url_for('pages.pages', type='page') }}">Pages</a></li>
                     <li class="nav-item"><a class="nav-link{% if 'pages' in request.endpoint and request.args.get('type') == 'blog' %} active{% endif %}" href="{{ url_for('pages.pages', type='blog') }}">Blog</a></li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle{% if 'templates' in request.endpoint %} active{% endif %}" href="#" id="templatesDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle{% if 'templates' in request.endpoint or 'ai_templates' in request.endpoint %} active{% endif %}" href="#" id="templatesDropdown" role="button" data-bs-toggle="dropdown">
                             Templates
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('templates_.templates') }}">Templates</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('templates_.blocks') }}">Template Blocks</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('ai_templates.ai_templates_list') }}"><i class="bi bi-magic"></i> AI Templates</a></li>
                         </ul>
                     </li>
                     <li class="nav-item"><a class="nav-link{% if 'users' in request.endpoint %} active{% endif %}" href="{{ url_for('users.users') }}">Users</a></li>

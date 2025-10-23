@@ -11,6 +11,7 @@ from cms.db import init_db, close_connection, APP_SECRET, PUB_DIR
 from cms.auth import bp as auth_bp, login_required, csrf_exempt
 from cms.views.pages import bp as pages_bp
 from cms.views.templates_ import bp as templates_bp
+from cms.views.ai_templates import bp as ai_templates_bp
 from cms.views.users import bp as users_bp
 from cms.views.settings import bp as settings_bp
 from cms.views.help import bp as help_bp
@@ -88,6 +89,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(pages_bp, url_prefix='/admin')
     app.register_blueprint(templates_bp, url_prefix='/admin')
+    app.register_blueprint(ai_templates_bp, url_prefix='/admin')
     app.register_blueprint(users_bp, url_prefix='/admin')
     app.register_blueprint(settings_bp, url_prefix='/admin')
     app.register_blueprint(help_bp, url_prefix='/admin')

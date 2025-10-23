@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% set title = "Add AI Template" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/neo.min.css">
+<style>
+    .CodeMirror {
+        height: auto;
+        max-height: 500px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Add AI Template</h1>
+                <a href="{{ url_for('ai_templates.ai_templates_list') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to AI Templates
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" id="aiTemplateAddForm">
+                        {{ csrf_field() }}
+
+                        <div class="mb-3">
+                            <label for="html_content" class="form-label">HTML Template <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="html_content" name="html_content" rows="15" required>{{ html_content or '' }}</textarea>
+                            <div class="form-text">Paste your HTML template here. The AI will convert it into CMS template blocks.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Template Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ name or '' }}" required>
+                            <div class="form-text">Give your template a descriptive name.</div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Draft
+                            </button>
+                            <a href="{{ url_for('ai_templates.ai_templates_list') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.CodeMirror) {
+        const textarea = document.getElementById('html_content');
+        if (textarea && !textarea._cmInitialized) {
+            textarea._cmInitialized = true;
+            const cm = CodeMirror.fromTextArea(textarea, {
+                lineNumbers: true,
+                mode: 'text/html',
+                theme: 'neo',
+                viewportMargin: Infinity,
+            });
+            textarea.style.display = 'none';
+            textarea.removeAttribute('required');
+
+            const form = document.getElementById('aiTemplateAddForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    cm.save();
+                    if (!textarea.value || textarea.value.trim() === '') {
+                        e.preventDefault();
+                        alert('HTML template content is required');
+                        cm.focus();
+                    }
+                });
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% set title = "Edit AI Template" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/neo.min.css">
+<style>
+    .CodeMirror {
+        height: auto;
+        max-height: 500px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    .progress {
+        height: 25px;
+        font-size: 14px;
+    }
+    .status-message {
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+    #conversionResult {
+        margin-top: 20px;
+    }
+    .json-preview {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Edit AI Template</h1>
+                <a href="{{ url_for('ai_templates.ai_templates_list') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to AI Templates
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" id="aiTemplateEditForm">
+                        {{ csrf_field() }}
+
+                        <div class="mb-3">
+                            <label for="html_content" class="form-label">HTML Template <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="html_content" name="html_content" rows="15" required>{{ template.html_content or '' }}</textarea>
+                            <div class="form-text">Paste your HTML template here. The AI will convert it into CMS template blocks.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Template Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ template.name or '' }}" required>
+                            <div class="form-text">Give your template a descriptive name.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <button type="button" class="btn btn-success" id="convertBtn">
+                                <i class="bi bi-magic"></i> Convert with AI
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Changes
+                            </button>
+                            <a href="{{ url_for('ai_templates.ai_templates_list') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div id="conversionProgress" style="display: none;">
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
+                                    <span id="progressText">Processing...</span>
+                                </div>
+                            </div>
+                            <div class="status-message" id="statusMessage"></div>
+                        </div>
+
+                        <!-- Conversion Result -->
+                        <div id="conversionResult" style="display: none;">
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> <strong>Conversion Successful!</strong>
+                                <p class="mb-0 mt-2">Your template has been converted. You can now import it into the system or download the JSON.</p>
+                            </div>
+                            <div class="json-preview">
+                                <h6>Generated Template JSON:</h6>
+                                <pre id="jsonPreview" style="margin: 0; white-space: pre-wrap; word-break: break-all;"></pre>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script>
+let cmEditor;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.CodeMirror) {
+        const textarea = document.getElementById('html_content');
+        if (textarea && !textarea._cmInitialized) {
+            textarea._cmInitialized = true;
+            cmEditor = CodeMirror.fromTextArea(textarea, {
+                lineNumbers: true,
+                mode: 'text/html',
+                theme: 'neo',
+                viewportMargin: Infinity,
+            });
+            textarea.style.display = 'none';
+            textarea.removeAttribute('required');
+
+            const form = document.getElementById('aiTemplateEditForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    cmEditor.save();
+                    if (!textarea.value || textarea.value.trim() === '') {
+                        e.preventDefault();
+                        alert('HTML template content is required');
+                        cmEditor.focus();
+                    }
+                });
+            }
+        }
+    }
+
+    // Convert with AI button
+    const convertBtn = document.getElementById('convertBtn');
+    if (convertBtn) {
+        convertBtn.addEventListener('click', async function() {
+            // Save editor content first
+            if (cmEditor) {
+                cmEditor.save();
+            }
+
+            const progressDiv = document.getElementById('conversionProgress');
+            const resultDiv = document.getElementById('conversionResult');
+            const statusMessage = document.getElementById('statusMessage');
+            const progressText = document.getElementById('progressText');
+
+            // Hide previous results
+            resultDiv.style.display = 'none';
+
+            // Show progress bar
+            progressDiv.style.display = 'block';
+            statusMessage.textContent = 'Initializing AI conversion...';
+            progressText.textContent = 'Processing...';
+
+            try {
+                // Update status
+                statusMessage.textContent = 'Sending request to AI model...';
+
+                const response = await fetch('{{ url_for("ai_templates.ai_templates_convert", template_id=template.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{ csrf_token }}'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Conversion failed');
+                }
+
+                // Success
+                statusMessage.textContent = 'Conversion completed successfully!';
+                progressText.textContent = 'Complete';
+
+                // Hide progress after a moment and show results
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                    resultDiv.style.display = 'block';
+                    document.getElementById('jsonPreview').textContent = JSON.stringify(data.template, null, 2);
+                }, 500);
+
+            } catch (error) {
+                // Error
+                progressText.textContent = 'Error';
+                statusMessage.innerHTML = '<div class="alert alert-danger mt-2"><i class="bi bi-exclamation-triangle"></i> ' + error.message + '</div>';
+
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                }, 3000);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

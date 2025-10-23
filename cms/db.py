@@ -241,6 +241,30 @@ def init_db():
         )
     ''')
 
+    # AI Templates table (for HTML to template conversion)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ai_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            html_content TEXT NOT NULL,
+            json_template TEXT,
+            status TEXT DEFAULT 'draft',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # AI Usage tracking table for budget enforcement
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ai_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            month_key TEXT UNIQUE NOT NULL,
+            total_requests INTEGER DEFAULT 0,
+            total_cost REAL DEFAULT 0.0,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     # Blog categories (used only for pages with type='blog')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS blog_categories (
