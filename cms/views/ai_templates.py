@@ -168,6 +168,33 @@ def ai_templates_convert(template_id: int):
 
     html_content = template['html_content']
 
+    # Get the conversion prompt from settings
+    cursor.execute('SELECT value FROM settings WHERE key = ?', ('ai_template_conversion_prompt',))
+    prompt_template_row = cursor.fetchone()
+    prompt_template = prompt_template_row['value'] if prompt_template_row else ''
+
+    # If no custom prompt in settings, use default
+    if not prompt_template:
+        prompt_template = '''I have this JSON structure for a CMS template below. Convert the current HTML template into similar template that would work with this CMS. Add parameters where dynamic text might be.
+
+Example CMS Template JSON Structure:
+{example_json}
+
+Guidelines:
+1. Break the HTML into logical blocks (header, navigation, content sections, footer, etc.)
+2. Each block should be a separate item in the "blocks" array
+3. Use "system" category for structural elements (DOCTYPE, head, closing tags)
+4. Use "content" category for editable content sections
+5. For dynamic content, add parameters in the default_parameters object
+6. Create descriptive titles and slugs for each block
+7. Ensure the template is valid HTML when blocks are assembled in order
+8. Add sort_order to maintain proper block sequence
+
+HTML Template to Convert:
+{html_content}
+
+Return ONLY a valid JSON object in the same structure as the example, with the HTML properly converted into blocks.'''
+
     # Get example template structure from existing templates
     cursor.execute('''
         SELECT g.title, g.slug, g.description, g.is_default_page, g.is_default_blog,
@@ -202,26 +229,11 @@ def ai_templates_convert(template_id: int):
                 "default_parameters": json.loads(block['default_parameters'] or '{}')
             })
 
-    # Create AI prompt (Note: The AI model is configured in Settings - defaults to the configured model)
-    prompt = f"""I have this JSON structure for a CMS template below. Convert the current HTML template into similar template that would work with this CMS. Add parameters where dynamic text might be.
-
-Example CMS Template JSON Structure:
-{json.dumps(example_json, indent=2)}
-
-Guidelines:
-1. Break the HTML into logical blocks (header, navigation, content sections, footer, etc.)
-2. Each block should be a separate item in the "blocks" array
-3. Use "system" category for structural elements (DOCTYPE, head, closing tags)
-4. Use "content" category for editable content sections
-5. For dynamic content, add parameters in the default_parameters object
-6. Create descriptive titles and slugs for each block
-7. Ensure the template is valid HTML when blocks are assembled in order
-8. Add sort_order to maintain proper block sequence
-
-HTML Template to Convert:
-{html_content}
-
-Return ONLY a valid JSON object in the same structure as the example, with the HTML properly converted into blocks."""
+    # Create AI prompt by substituting placeholders
+    prompt = prompt_template.format(
+        example_json=json.dumps(example_json, indent=2),
+        html_content=html_content
+    )
 
     try:
         # Call AI model

@@ -356,6 +356,25 @@ def init_db():
         ('ai_api_key', '', 'AI API key'),
         ('ai_monthly_budget', '20', 'Monthly AI usage budget in USD'),
         ('ai_model', 'gpt-4o-mini', 'AI model identifier (e.g. gpt-4o-mini)'),
+        ('ai_template_conversion_prompt', '''I have this JSON structure for a CMS template below. Convert the current HTML template into similar template that would work with this CMS. Add parameters where dynamic text might be.
+
+Example CMS Template JSON Structure:
+{example_json}
+
+Guidelines:
+1. Break the HTML into logical blocks (header, navigation, content sections, footer, etc.)
+2. Each block should be a separate item in the "blocks" array
+3. Use "system" category for structural elements (DOCTYPE, head, closing tags)
+4. Use "content" category for editable content sections
+5. For dynamic content, add parameters in the default_parameters object
+6. Create descriptive titles and slugs for each block
+7. Ensure the template is valid HTML when blocks are assembled in order
+8. Add sort_order to maintain proper block sequence
+
+HTML Template to Convert:
+{html_content}
+
+Return ONLY a valid JSON object in the same structure as the example, with the HTML properly converted into blocks.''', 'AI prompt for converting HTML templates to CMS templates. Use {example_json} and {html_content} as placeholders.'),
         ('wysiwyg_stylesheets', '', 'Comma-separated list of stylesheet URLs to load in WYSIWYG preview'),
     ]
     for key, value, desc in default_settings:
