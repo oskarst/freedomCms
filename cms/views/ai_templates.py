@@ -160,13 +160,14 @@ def ai_templates_convert(template_id: int):
     db = get_db()
     cursor = db.cursor()
 
-    cursor.execute('SELECT html_content FROM ai_templates WHERE id = ?', (template_id,))
+    cursor.execute('SELECT name, html_content FROM ai_templates WHERE id = ?', (template_id,))
     template = cursor.fetchone()
 
     if not template:
         return jsonify({'error': 'Template not found'}), 404
 
     html_content = template['html_content']
+    template_name = template['name']
 
     # Get the conversion prompt from settings
     cursor.execute('SELECT value FROM settings WHERE key = ?', ('ai_template_conversion_prompt',))
@@ -175,64 +176,142 @@ def ai_templates_convert(template_id: int):
 
     # If no custom prompt in settings, use default
     if not prompt_template:
-        prompt_template = '''I have this JSON structure for a CMS template below. Convert the current HTML template into similar template that would work with this CMS. Add parameters where dynamic text might be.
+        prompt_template = '''You are converting an HTML template into a CMS template structure. The CMS uses a block-based system where templates are composed of reusable blocks.
 
-Example CMS Template JSON Structure:
+Example CMS Template JSON Structure (THIS IS JUST AN EXAMPLE FORMAT - DO NOT COPY THE CONTENT):
 {example_json}
 
-Guidelines:
-1. Break the HTML into logical blocks (header, navigation, content sections, footer, etc.)
-2. Each block should be a separate item in the "blocks" array
-3. Use "system" category for structural elements (DOCTYPE, head, closing tags)
-4. Use "content" category for editable content sections
-5. For dynamic content, add parameters in the default_parameters object
-6. Create descriptive titles and slugs for each block
-7. Ensure the template is valid HTML when blocks are assembled in order
-8. Add sort_order to maintain proper block sequence
+IMPORTANT CONVERSION GUIDELINES:
+
+1. STRUCTURE: Break the HTML into logical blocks (header, meta tags, navigation, hero, content sections, footer, closing tags)
+
+2. BLOCK CATEGORIES:
+   - "system" = Structural/non-editable blocks (DOCTYPE, <head>, </head>, <body>, </body>, CSS/JS includes)
+   - "content" = Editable content sections (navigation, hero, features, articles, footer content)
+
+3. BLOCK SLUGS:
+   - MUST prefix ALL block slugs with "{template_prefix}-" for uniqueness
+   - Examples: "{template_prefix}-header", "{template_prefix}-hero", "{template_prefix}-footer"
+   - Use descriptive names after the prefix
+
+4. PARAMETERS:
+   - Identify dynamic/editable text and replace with {{{{parameter_name}}}} placeholders
+   - Add these parameters to default_parameters object with default values
+   - Common parameters: {{{{title}}}}, {{{{description}}}}, {{{{button_text}}}}, {{{{content:wysiwyg}}}}
+   - Use ":wysiwyg" suffix for rich text content (e.g., {{{{content:wysiwyg}}}})
+
+5. SPECIAL VARIABLES:
+   - Use {{{{config:base_url}}}} for site base URL references
+   - Use {{{{page:featured:webp}}}} for featured images
+   - Use {{{{page_title}}}}, {{{{page_description}}}} for page-specific meta
+
+6. HTML VALIDITY: Ensure blocks assemble into valid HTML when concatenated in order
+
+7. SORT ORDER: Blocks should have sequential sort_order for proper assembly
+
+Template Name: {template_name}
+Template Slug Prefix: {template_prefix}
 
 HTML Template to Convert:
 {html_content}
 
-Return ONLY a valid JSON object in the same structure as the example, with the HTML properly converted into blocks.'''
+Return ONLY a valid JSON array (like the example) with the HTML properly converted into blocks. Include title, slug, description, and all blocks with proper categorization and parameters.'''
 
-    # Get example template structure from existing templates
-    cursor.execute('''
-        SELECT g.title, g.slug, g.description, g.is_default_page, g.is_default_blog,
-               d.title as block_title, d.slug as block_slug, d.category,
-               d.content as block_content, d.default_parameters
-        FROM template_groups g
-        LEFT JOIN template_group_blocks tgb ON tgb.group_id = g.id
-        LEFT JOIN page_template_defs d ON d.id = tgb.template_id
-        WHERE g.id = (SELECT id FROM template_groups LIMIT 1)
-        ORDER BY tgb.sort_order
-        LIMIT 3
-    ''')
-    example_blocks = cursor.fetchall()
+    # Use real-world example JSON structure showing typical CMS template format
+    example_json = [
+        {
+            "title": "Landing Page Template",
+            "slug": "landing-page-template",
+            "description": "Modern landing page with hero, features, and call-to-action",
+            "is_default": 0,
+            "is_default_page": 0,
+            "is_default_blog": 0,
+            "blocks": [
+                {
+                    "title": "Base Header",
+                    "slug": "landing-base-header",
+                    "category": "system",
+                    "content": "<!doctype html>\n<html lang=\"en\">\n<head>",
+                    "default_parameters": {}
+                },
+                {
+                    "title": "Meta Tags",
+                    "slug": "landing-meta",
+                    "category": "system",
+                    "content": "<meta charset=\"utf-8\">\n<title>{{page_title}}</title>\n<meta name=\"description\" content=\"{{page_description}}\"/>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">",
+                    "default_parameters": {
+                        "page_title": "Landing Page",
+                        "page_description": "Welcome to our landing page"
+                    }
+                },
+                {
+                    "title": "Header Close",
+                    "slug": "landing-header-close",
+                    "category": "system",
+                    "content": "<link rel=\"stylesheet\" href=\"{{config:base_url}}/css/styles.css\">\n</head>\n<body>",
+                    "default_parameters": {}
+                },
+                {
+                    "title": "Navigation Menu",
+                    "slug": "landing-menu",
+                    "category": "content",
+                    "content": "<nav>\n  <ul>\n    <li><a href=\"#home\">Home</a></li>\n    <li><a href=\"#about\">About</a></li>\n    <li><a href=\"#contact\">Contact</a></li>\n  </ul>\n</nav>",
+                    "default_parameters": {}
+                },
+                {
+                    "title": "Hero Section",
+                    "slug": "landing-hero",
+                    "category": "content",
+                    "content": "<section class=\"hero\">\n  <h1>{{hero_title}}</h1>\n  <p>{{hero_subtitle}}</p>\n  <a href=\"#cta\" class=\"btn\">{{cta_button}}</a>\n</section>",
+                    "default_parameters": {
+                        "hero_title": "Welcome to Our Site",
+                        "hero_subtitle": "Discover amazing features",
+                        "cta_button": "Get Started"
+                    }
+                },
+                {
+                    "title": "Features Section",
+                    "slug": "landing-features",
+                    "category": "content",
+                    "content": "<section class=\"features\">\n  <h2>{{features_title}}</h2>\n  <div class=\"feature-grid\">\n    {{features_content:wysiwyg}}\n  </div>\n</section>",
+                    "default_parameters": {
+                        "features_title": "Our Features",
+                        "features_content": "<div>Feature content here</div>"
+                    }
+                },
+                {
+                    "title": "Footer",
+                    "slug": "landing-footer",
+                    "category": "content",
+                    "content": "<footer>\n  <p>&copy; 2025 {{company_name}}. All rights reserved.</p>\n</footer>",
+                    "default_parameters": {
+                        "company_name": "Your Company"
+                    }
+                },
+                {
+                    "title": "Body Close",
+                    "slug": "landing-body-close",
+                    "category": "system",
+                    "content": "<script src=\"{{config:base_url}}/js/main.js\"></script>\n</body>\n</html>",
+                    "default_parameters": {}
+                }
+            ]
+        }
+    ]
 
-    # Build example JSON structure
-    example_json = {
-        "title": "Example Template",
-        "slug": "example-template",
-        "description": "Example template description",
-        "is_default_page": 0,
-        "is_default_blog": 0,
-        "blocks": []
-    }
-
-    for block in example_blocks:
-        if block['block_title']:
-            example_json['blocks'].append({
-                "title": block['block_title'],
-                "slug": block['block_slug'],
-                "category": block['category'],
-                "content": block['block_content'][:200] + "..." if len(block['block_content']) > 200 else block['block_content'],
-                "default_parameters": json.loads(block['default_parameters'] or '{}')
-            })
+    # Generate slug prefix from template name
+    template_prefix = template_name.lower().replace(' ', '-').replace('_', '-')
+    # Remove special characters and multiple dashes
+    import re
+    template_prefix = re.sub(r'[^a-z0-9-]', '', template_prefix)
+    template_prefix = re.sub(r'-+', '-', template_prefix).strip('-')
 
     # Create AI prompt by substituting placeholders
     prompt = prompt_template.format(
         example_json=json.dumps(example_json, indent=2),
-        html_content=html_content
+        html_content=html_content,
+        template_name=template_name,
+        template_prefix=template_prefix
     )
 
     try:

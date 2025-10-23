@@ -70,8 +70,10 @@
                                 <strong>Available placeholders:</strong><br>
                                 <code>{example_json}</code> - Example template structure from your existing templates<br>
                                 <code>{html_content}</code> - The HTML content to be converted<br>
+                                <code>{template_name}</code> - The name of the template being converted<br>
+                                <code>{template_prefix}</code> - Slugified version of template name (e.g., "my-template" from "My Template")<br>
                                 <br>
-                                <strong>Tip:</strong> Customize this prompt to improve conversion results based on your template structure and conventions.
+                                <strong>Tip:</strong> Use <code>{template_prefix}</code> in the prompt to ensure unique block slugs (e.g., "landing-header", "portfolio-hero").
                             </div>
                             {% else %}
                             <input type="text" class="form-control" id="setting_{{ setting.key }}" name="setting_{{ setting.key }}" value="{{ setting.value }}">

@@ -356,25 +356,46 @@ def init_db():
         ('ai_api_key', '', 'AI API key'),
         ('ai_monthly_budget', '20', 'Monthly AI usage budget in USD'),
         ('ai_model', 'gpt-4o-mini', 'AI model identifier (e.g. gpt-4o-mini)'),
-        ('ai_template_conversion_prompt', '''I have this JSON structure for a CMS template below. Convert the current HTML template into similar template that would work with this CMS. Add parameters where dynamic text might be.
+        ('ai_template_conversion_prompt', '''You are converting an HTML template into a CMS template structure. The CMS uses a block-based system where templates are composed of reusable blocks.
 
-Example CMS Template JSON Structure:
+Example CMS Template JSON Structure (THIS IS JUST AN EXAMPLE FORMAT - DO NOT COPY THE CONTENT):
 {example_json}
 
-Guidelines:
-1. Break the HTML into logical blocks (header, navigation, content sections, footer, etc.)
-2. Each block should be a separate item in the "blocks" array
-3. Use "system" category for structural elements (DOCTYPE, head, closing tags)
-4. Use "content" category for editable content sections
-5. For dynamic content, add parameters in the default_parameters object
-6. Create descriptive titles and slugs for each block
-7. Ensure the template is valid HTML when blocks are assembled in order
-8. Add sort_order to maintain proper block sequence
+IMPORTANT CONVERSION GUIDELINES:
+
+1. STRUCTURE: Break the HTML into logical blocks (header, meta tags, navigation, hero, content sections, footer, closing tags)
+
+2. BLOCK CATEGORIES:
+   - "system" = Structural/non-editable blocks (DOCTYPE, <head>, </head>, <body>, </body>, CSS/JS includes)
+   - "content" = Editable content sections (navigation, hero, features, articles, footer content)
+
+3. BLOCK SLUGS:
+   - MUST prefix ALL block slugs with "{template_prefix}-" for uniqueness
+   - Examples: "{template_prefix}-header", "{template_prefix}-hero", "{template_prefix}-footer"
+   - Use descriptive names after the prefix
+
+4. PARAMETERS:
+   - Identify dynamic/editable text and replace with {{parameter_name}} placeholders
+   - Add these parameters to default_parameters object with default values
+   - Common parameters: {{title}}, {{description}}, {{button_text}}, {{content:wysiwyg}}
+   - Use ":wysiwyg" suffix for rich text content (e.g., {{content:wysiwyg}})
+
+5. SPECIAL VARIABLES:
+   - Use {{config:base_url}} for site base URL references
+   - Use {{page:featured:webp}} for featured images
+   - Use {{page_title}}, {{page_description}} for page-specific meta
+
+6. HTML VALIDITY: Ensure blocks assemble into valid HTML when concatenated in order
+
+7. SORT ORDER: Blocks should have sequential sort_order for proper assembly
+
+Template Name: {template_name}
+Template Slug Prefix: {template_prefix}
 
 HTML Template to Convert:
 {html_content}
 
-Return ONLY a valid JSON object in the same structure as the example, with the HTML properly converted into blocks.''', 'AI prompt for converting HTML templates to CMS templates. Use {example_json} and {html_content} as placeholders.'),
+Return ONLY a valid JSON array (like the example) with the HTML properly converted into blocks. Include title, slug, description, and all blocks with proper categorization and parameters.''', 'AI prompt for converting HTML templates to CMS templates. Use {example_json}, {html_content}, {template_name}, and {template_prefix} as placeholders.'),
         ('wysiwyg_stylesheets', '', 'Comma-separated list of stylesheet URLs to load in WYSIWYG preview'),
     ]
     for key, value, desc in default_settings:
