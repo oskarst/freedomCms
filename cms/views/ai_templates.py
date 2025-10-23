@@ -217,82 +217,96 @@ HTML Template to Convert:
 
 Return ONLY a valid JSON array (like the example) with the HTML properly converted into blocks. Include title, slug, description, and all blocks with proper categorization and parameters.'''
 
-    # Use real-world example JSON structure showing typical CMS template format
+    # Use real-world example JSON structure from actual CMS templates
     example_json = [
         {
-            "title": "Landing Page Template",
-            "slug": "landing-page-template",
-            "description": "Modern landing page with hero, features, and call-to-action",
+            "title": "Example Template",
+            "slug": "example-template",
+            "description": "Template showing block structure",
             "is_default": 0,
             "is_default_page": 0,
             "is_default_blog": 0,
             "blocks": [
                 {
                     "title": "Base Header",
-                    "slug": "landing-base-header",
+                    "slug": "example-base-header",
                     "category": "system",
-                    "content": "<!doctype html>\n<html lang=\"en\">\n<head>",
+                    "content": "<!doctype html>\r\n<html lang=\"en\">\r\n<head>",
                     "default_parameters": {}
                 },
                 {
                     "title": "Meta Tags",
-                    "slug": "landing-meta",
+                    "slug": "example-meta",
                     "category": "system",
-                    "content": "<meta charset=\"utf-8\">\n<title>{{page_title}}</title>\n<meta name=\"description\" content=\"{{page_description}}\"/>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">",
+                    "content": "<meta charset=\"utf-8\">\r\n<title>{{page_title}}</title>\r\n<meta name=\"description\" content=\"{{page_description}}\"/>\r\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">",
                     "default_parameters": {
-                        "page_title": "Landing Page",
-                        "page_description": "Welcome to our landing page"
+                        "page_title": "Page Title",
+                        "page_description": "Page description"
                     }
                 },
                 {
                     "title": "Header Close",
-                    "slug": "landing-header-close",
+                    "slug": "example-header-close",
                     "category": "system",
-                    "content": "<link rel=\"stylesheet\" href=\"{{config:base_url}}/css/styles.css\">\n</head>\n<body>",
+                    "content": "<link rel=\"stylesheet\" href=\"{{config:base_url}}/css/styles.css\">\r\n</head>\r\n<body>",
                     "default_parameters": {}
                 },
                 {
                     "title": "Navigation Menu",
-                    "slug": "landing-menu",
+                    "slug": "example-menu",
                     "category": "content",
-                    "content": "<nav>\n  <ul>\n    <li><a href=\"#home\">Home</a></li>\n    <li><a href=\"#about\">About</a></li>\n    <li><a href=\"#contact\">Contact</a></li>\n  </ul>\n</nav>",
+                    "content": "<nav>\r\n<ul class=\"menu\">\r\n<li><a href=\"{{config:base_url}}/\">Home</a></li>\r\n<li><a href=\"#about\">About</a></li>\r\n</ul>\r\n</nav>",
+                    "default_parameters": {}
+                },
+                {
+                    "title": "Content Start",
+                    "slug": "example-content-start",
+                    "category": "system",
+                    "content": "<div class=\"main-container\">",
                     "default_parameters": {}
                 },
                 {
                     "title": "Hero Section",
-                    "slug": "landing-hero",
+                    "slug": "example-hero",
                     "category": "content",
-                    "content": "<section class=\"hero\">\n  <h1>{{hero_title}}</h1>\n  <p>{{hero_subtitle}}</p>\n  <a href=\"#cta\" class=\"btn\">{{cta_button}}</a>\n</section>",
+                    "content": "<section class=\"hero\">\r\n<h1>{{hero_title}}</h1>\r\n<p>{{slogan}}</p>\r\n</section>",
                     "default_parameters": {
-                        "hero_title": "Welcome to Our Site",
-                        "hero_subtitle": "Discover amazing features",
-                        "cta_button": "Get Started"
+                        "hero_title": "Welcome",
+                        "slogan": "Your tagline here"
                     }
                 },
                 {
-                    "title": "Features Section",
-                    "slug": "landing-features",
+                    "title": "Content Paragraph",
+                    "slug": "example-content-paragraph",
                     "category": "content",
-                    "content": "<section class=\"features\">\n  <h2>{{features_title}}</h2>\n  <div class=\"feature-grid\">\n    {{features_content:wysiwyg}}\n  </div>\n</section>",
+                    "content": "<section>\r\n<h3>{{Title}}</h3>\r\n<p>{{Content:wysiwyg}}</p>\r\n<a class=\"btn\" href=\"#contacts\">{{Button Text}}</a>\r\n</section>",
                     "default_parameters": {
-                        "features_title": "Our Features",
-                        "features_content": "<div>Feature content here</div>"
+                        "Title": "Section Title",
+                        "Content": "Content goes here",
+                        "Button Text": "Get Started"
                     }
+                },
+                {
+                    "title": "Content End",
+                    "slug": "example-content-end",
+                    "category": "system",
+                    "content": "</div>",
+                    "default_parameters": {}
                 },
                 {
                     "title": "Footer",
-                    "slug": "landing-footer",
+                    "slug": "example-footer",
                     "category": "content",
-                    "content": "<footer>\n  <p>&copy; 2025 {{company_name}}. All rights reserved.</p>\n</footer>",
+                    "content": "<footer>\r\n<p>&copy; 2025 {{company_name}}</p>\r\n</footer>",
                     "default_parameters": {
                         "company_name": "Your Company"
                     }
                 },
                 {
                     "title": "Body Close",
-                    "slug": "landing-body-close",
+                    "slug": "example-body-close",
                     "category": "system",
-                    "content": "<script src=\"{{config:base_url}}/js/main.js\"></script>\n</body>\n</html>",
+                    "content": "<script src=\"{{config:base_url}}/js/scripts.js\"></script>\r\n</body>\r\n</html>",
                     "default_parameters": {}
                 }
             ]
